@@ -1,0 +1,23 @@
+{
+  "extends": "./packages/config/tsconfig/base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "outDir": ".test-dist",
+    "rootDir": ".",
+    "noEmit": false,
+    "types": ["node"]
+  },
+  "include": [
+    "scripts/**/*.ts",
+    "packages/**/*.test.ts",
+    "apps/**/*.test.ts",
+    "packages/**/*.ts",
+    "apps/web/src/lib/auth-routing.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    ".test-dist"
+  ]
+}

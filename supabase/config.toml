@@ -1,0 +1,16 @@
+project_id = "aura"
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+port = 54323
+
+[api]
+port = 54321
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]

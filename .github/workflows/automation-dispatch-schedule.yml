@@ -1,0 +1,30 @@
+name: Automation Dispatch Scheduler
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+
+concurrency:
+  group: automation-dispatch-scheduler
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Trigger automation-dispatch
+    if: ${{ secrets.AURA_AUTOMATION_DISPATCH_URL != '' && secrets.AUTOMATION_JOB_SECRET != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Invoke automation-dispatch edge function
+        env:
+          AURA_AUTOMATION_DISPATCH_URL: ${{ secrets.AURA_AUTOMATION_DISPATCH_URL }}
+          AUTOMATION_JOB_SECRET: ${{ secrets.AUTOMATION_JOB_SECRET }}
+        run: |
+          curl --fail --show-error --silent \
+            --request POST \
+            --url "$AURA_AUTOMATION_DISPATCH_URL" \
+            --header "Content-Type: application/json" \
+            --header "x-aura-job-secret: $AUTOMATION_JOB_SECRET" \
+            --data '{"mode":"scheduler"}'

@@ -1,0 +1,25 @@
+{
+  "name": "@aura/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "format": "prettier --check ."
+  },
+  "dependencies": {
+    "@aura/core": "workspace:*",
+    "@aura/types": "workspace:*",
+    "@aura/ui": "workspace:*",
+    "@supabase/ssr": "^0.5.2",
+    "next": "^15.5.2",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@aura/config": "workspace:*"
+  }
+}

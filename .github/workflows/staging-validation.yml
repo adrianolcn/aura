@@ -1,0 +1,54 @@
+name: Staging Validation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  staging:
+    name: Validate staging integration
+    if: ${{ secrets.AURA_INTEGRATION_SUPABASE_URL != '' && secrets.AURA_INTEGRATION_SUPABASE_ANON_KEY != '' && secrets.AURA_INTEGRATION_SUPABASE_SERVICE_ROLE_KEY != '' && secrets.E2E_USER_EMAIL != '' && secrets.E2E_USER_PASSWORD != '' && secrets.NEXT_PUBLIC_SUPABASE_URL != '' && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_APP_ENV: staging
+      NEXT_PUBLIC_RELEASE_VERSION: staging-validation
+      NEXT_PUBLIC_OBSERVABILITY_ENABLED: false
+      AURA_INTEGRATION_SUPABASE_URL: ${{ secrets.AURA_INTEGRATION_SUPABASE_URL }}
+      AURA_INTEGRATION_SUPABASE_ANON_KEY: ${{ secrets.AURA_INTEGRATION_SUPABASE_ANON_KEY }}
+      AURA_INTEGRATION_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.AURA_INTEGRATION_SUPABASE_SERVICE_ROLE_KEY }}
+      AURA_EDGE_BASE_URL: ${{ secrets.AURA_EDGE_BASE_URL }}
+      AURA_INTEGRATION_META_READY: ${{ secrets.AURA_INTEGRATION_META_READY }}
+      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+      E2E_CLIENT_NAME: ${{ secrets.E2E_CLIENT_NAME }}
+      E2E_SEND_TEMPLATE: ${{ secrets.E2E_SEND_TEMPLATE }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run integration suite against staging
+        run: corepack pnpm test
+
+      - name: Run E2E against staging
+        run: corepack pnpm test:e2e

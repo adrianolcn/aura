@@ -1,0 +1,10 @@
+{
+  "name": "@aura/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint/base": "./eslint/base.cjs",
+    "./prettier": "./prettier/base.cjs"
+  }
+}

@@ -1,0 +1,45 @@
+name: Database Validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  migrations:
+    name: Validate Supabase Migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase stack
+        run: supabase start
+
+      - name: Reset local database with migrations and seeds
+        run: supabase db reset --local
+
+      - name: Lint database schema
+        run: supabase db lint
+
+      - name: Save Supabase status
+        if: always()
+        run: supabase status > supabase-status.txt
+
+      - name: Upload database validation artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-status
+          path: supabase-status.txt
+
+      - name: Stop local Supabase stack
+        if: always()
+        run: supabase stop
