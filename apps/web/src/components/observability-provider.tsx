@@ -14,7 +14,6 @@ export function ObservabilityProvider({ children }: PropsWithChildren) {
           ? 'sentry'
           : 'http',
       endpoint: process.env.NEXT_PUBLIC_OBSERVABILITY_ENDPOINT,
-      authToken: process.env.NEXT_PUBLIC_OBSERVABILITY_AUTH_TOKEN,
       sentryDsn: process.env.NEXT_PUBLIC_OBSERVABILITY_SENTRY_DSN,
       environment: process.env.NEXT_PUBLIC_APP_ENV ?? 'local',
       release: process.env.NEXT_PUBLIC_RELEASE_VERSION ?? 'dev',

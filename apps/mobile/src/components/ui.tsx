@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useI18n } from '@aura/core';
+
 import { colors } from '@/theme';
 
 export function ScreenShell({
@@ -16,11 +18,37 @@ export function ScreenShell({
   children,
   footer,
 }: PropsWithChildren<{ title: string; subtitle: string; footer?: ReactNode }>) {
+  const { locale, locales, localeLabel, setLocale, t } = useI18n();
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>AURA</Text>
+          <Text style={styles.localeLabel}>{t('common.localeSelectorLabel')}</Text>
+          <View style={styles.localeRow}>
+            {locales.map((supportedLocale) => (
+              <Pressable
+                key={supportedLocale}
+                onPress={() => {
+                  void setLocale(supportedLocale);
+                }}
+                style={[
+                  styles.localeChip,
+                  locale === supportedLocale ? styles.localeChipActive : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.localeChipText,
+                    locale === supportedLocale ? styles.localeChipTextActive : null,
+                  ]}
+                >
+                  {localeLabel(supportedLocale)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
@@ -181,11 +209,12 @@ export function BottomNav({
   activeTab: string;
   onChange: (tab: string) => void;
 }) {
+  const { t } = useI18n();
   const tabs = [
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'clients', label: 'Clientes' },
-    { key: 'agenda', label: 'Agenda' },
-    { key: 'notifications', label: 'Avisos' },
+    { key: 'dashboard', label: t('nav.dashboard') },
+    { key: 'clients', label: t('nav.clients') },
+    { key: 'agenda', label: t('nav.agenda') },
+    { key: 'notifications', label: t('nav.notifications') },
   ];
 
   return (
@@ -227,6 +256,40 @@ const styles = StyleSheet.create({
   hero: {
     paddingTop: 8,
     paddingBottom: 8,
+  },
+  localeLabel: {
+    marginTop: 10,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.inkSoft,
+    textTransform: 'uppercase',
+    letterSpacing: 1.6,
+  },
+  localeRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  localeChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  localeChipActive: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  localeChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.inkSoft,
+  },
+  localeChipTextActive: {
+    color: colors.surface,
   },
   eyebrow: {
     fontSize: 12,

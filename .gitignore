@@ -12,3 +12,6 @@ coverage
 apps/mobile/.expo
 apps/mobile/web-build
 supabase/.temp
+.playwright
+playwright-report
+test-results

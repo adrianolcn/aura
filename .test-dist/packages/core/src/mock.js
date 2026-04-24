@@ -11,6 +11,7 @@ exports.demoProfessional = {
     phone: '+55 11 99876-4455',
     whatsappPhone: '+55 11 99876-4455',
     email: 'aurora@aurabeauty.com',
+    locale: 'pt-BR',
     timezone: 'America/Bahia',
     planTier: 'mvp',
     createdAt: now,

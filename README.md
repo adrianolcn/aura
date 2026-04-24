@@ -1,20 +1,20 @@
 # AURA
 
-Plataforma de gestão para maquiadoras e penteadistas com foco em CRM, agenda, contratos, arquivos, mensageria e automações operacionais.
+Plataforma de gestão para maquiadoras e penteadistas com foco em CRM, agenda, contratos, arquivos, mensageria operacional e automações.
 
 ## Estado atual
 
-Fase 7 implementada.
+Fase 11 implementada.
 
-Entradas centrais desta fase:
+Entradas principais desta fase:
 
-- preparo de staging real e piloto assistido
-- inbox web/mobile mais alinhada
-- sincronização pragmática por polling controlado
-- observabilidade externa com suporte a endpoint autenticado e Sentry por DSN
-- testes integrados das Edge Functions contra ambiente real quando os envs existirem
-- workflows de staging, E2E e scheduler
-- runbooks e checklists operacionais de piloto
+- fechamento adicional de i18n no detalhe da cliente do web e no núcleo da inbox mobile
+- checklist de go-live controlado e validação mobile dedicados
+- preflight de staging reforçado com secrets de WhatsApp e scheduler
+- runbooks organizados para staging, piloto, go-live e troubleshooting
+- autenticação reaproveitada no E2E via `storageState`
+- artefatos explícitos de evidência para validação e go-live
+- organização mantida para versionamento limpo no GitHub
 
 ## Estrutura
 
@@ -33,44 +33,67 @@ Entradas centrais desta fase:
   seed.sql
 /.github
   /workflows
+  /ISSUE_TEMPLATE
 /docs
+/scripts
 ```
 
 ## Fluxos principais
 
 Web:
 
-- login e signup reais
-- CRM, eventos, agenda, orçamentos, contratos e arquivos
-- inbox por cliente com opt-in, template, janela de 24h, retry de falha e automações
+- auth real com Supabase
+- CRM, agenda, contratos, orçamentos e arquivos
+- inbox operacional por cliente
 
 Mobile:
 
-- login e signup reais
+- auth real
 - operação central do núcleo
-- inbox por cliente com o mesmo domínio do web
-- polling controlado para sincronização do histórico
+- inbox por cliente
+- pickers nativos para data e hora
 
 Server/edge:
 
 - `whatsapp-webhook`
 - `whatsapp-send`
 - `automation-dispatch`
-- logs auditáveis e observabilidade externa opcional
 
-## Migrations
+## Decisões arquiteturais atuais
 
-- [supabase/migrations/20260423103000_init_aura.sql](C:/dev/aura/supabase/migrations/20260423103000_init_aura.sql)
-- [supabase/migrations/20260424100000_auth_and_tenant_guards.sql](C:/dev/aura/supabase/migrations/20260424100000_auth_and_tenant_guards.sql)
-- [supabase/migrations/20260424113000_contract_document_links.sql](C:/dev/aura/supabase/migrations/20260424113000_contract_document_links.sql)
-- [supabase/migrations/20260423143000_whatsapp_communications.sql](C:/dev/aura/supabase/migrations/20260423143000_whatsapp_communications.sql)
-- [supabase/migrations/20260424153000_automation_dispatch_runs.sql](C:/dev/aura/supabase/migrations/20260424153000_automation_dispatch_runs.sql)
+- multi-tenant por `professional_id`
+- integração sensível do WhatsApp apenas no lado server/edge
+- observabilidade do frontend via Sentry DSN
+- observabilidade do edge via Sentry ou HTTP autenticado
+- inbox mantida com polling de 15s por decisão operacional do piloto atual
+
+## Internacionalização
+
+- padrão: `pt-BR`
+- secundário: `en-US`
+- fallback sempre em `pt-BR`
+- seletor:
+  - web: shell lateral
+  - mobile: hero das telas
+
+Cobertura principal nesta fase:
+
+- autenticação
+- navegação principal
+- dashboard
+- clientes
+- agenda
+- contratos
+- inbox principal no web e no mobile
+- resumo e timeline do detalhe da cliente
+
+Detalhes em [docs/i18n.md](C:/dev/aura/docs/i18n.md).
 
 ## Variáveis de ambiente
 
-Copie `.env.example` para `.env.local`.
+Copie [`.env.example`](C:/dev/aura/.env.example) para `.env.local`.
 
-Web:
+Frontend:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -79,11 +102,7 @@ Web:
 - `NEXT_PUBLIC_OBSERVABILITY_ENABLED`
 - `NEXT_PUBLIC_OBSERVABILITY_PROVIDER`
 - `NEXT_PUBLIC_OBSERVABILITY_ENDPOINT`
-- `NEXT_PUBLIC_OBSERVABILITY_AUTH_TOKEN`
 - `NEXT_PUBLIC_OBSERVABILITY_SENTRY_DSN`
-
-Mobile:
-
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 - `EXPO_PUBLIC_APP_ENV`
@@ -91,10 +110,9 @@ Mobile:
 - `EXPO_PUBLIC_OBSERVABILITY_ENABLED`
 - `EXPO_PUBLIC_OBSERVABILITY_PROVIDER`
 - `EXPO_PUBLIC_OBSERVABILITY_ENDPOINT`
-- `EXPO_PUBLIC_OBSERVABILITY_AUTH_TOKEN`
 - `EXPO_PUBLIC_OBSERVABILITY_SENTRY_DSN`
 
-Edge Functions:
+Edge / integração:
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
@@ -111,11 +129,7 @@ Edge Functions:
 - `OBSERVABILITY_AUTH_TOKEN`
 - `OBSERVABILITY_SENTRY_DSN`
 
-Observacao:
-
-- use `*_OBSERVABILITY_AUTH_TOKEN` no frontend apenas se o provedor oferecer token publico de ingestao; caso contrario, prefira `sentry` com DSN ou encaminhamento server-side
-
-Integração/staging:
+Staging / integração real:
 
 - `AURA_AUTOMATION_DISPATCH_URL`
 - `AURA_WHATSAPP_WEBHOOK_URL`
@@ -133,29 +147,21 @@ E2E:
 - `E2E_CLIENT_NAME`
 - `E2E_SEND_TEMPLATE`
 
-## Scripts
+## Scripts principais
 
 ```bash
 pnpm dev:web
 pnpm dev:mobile
-pnpm typecheck
-pnpm lint
-pnpm test
-pnpm test:e2e
+pnpm functions:serve
 pnpm db:start
 pnpm db:reset
 pnpm db:lint
-pnpm functions:serve
-pnpm --filter @aura/web build
+corepack pnpm -r typecheck
+corepack pnpm -r lint
+corepack pnpm test
+corepack pnpm test:e2e
+corepack pnpm --filter @aura/web build
 ```
-
-## Workflows
-
-- [/.github/workflows/ci.yml](C:/dev/aura/.github/workflows/ci.yml)
-- [/.github/workflows/db-validation.yml](C:/dev/aura/.github/workflows/db-validation.yml)
-- [/.github/workflows/e2e.yml](C:/dev/aura/.github/workflows/e2e.yml)
-- [/.github/workflows/automation-dispatch-schedule.yml](C:/dev/aura/.github/workflows/automation-dispatch-schedule.yml)
-- [/.github/workflows/staging-validation.yml](C:/dev/aura/.github/workflows/staging-validation.yml)
 
 ## Ordem recomendada de validação local
 
@@ -173,12 +179,19 @@ pnpm --filter @aura/web build
 12. `pnpm dev:mobile`
 13. `corepack pnpm test:e2e`
 
-## Staging e piloto
+## Documentação principal
 
-Documentos operacionais:
-
+- [CONTRIBUTING.md](C:/dev/aura/CONTRIBUTING.md)
+- [docs/architecture.md](C:/dev/aura/docs/architecture.md)
+- [docs/development-workflow.md](C:/dev/aura/docs/development-workflow.md)
+- [docs/i18n.md](C:/dev/aura/docs/i18n.md)
 - [docs/staging-validation.md](C:/dev/aura/docs/staging-validation.md)
 - [docs/pilot-runbook.md](C:/dev/aura/docs/pilot-runbook.md)
+- [docs/go-live.md](C:/dev/aura/docs/go-live.md)
+- [docs/go-live-evidence.md](C:/dev/aura/docs/go-live-evidence.md)
+- [docs/mobile-validation.md](C:/dev/aura/docs/mobile-validation.md)
+- [docs/validation-evidence.md](C:/dev/aura/docs/validation-evidence.md)
+- [docs/pilot-daily-ops.md](C:/dev/aura/docs/pilot-daily-ops.md)
 - [docs/incident-response-messaging.md](C:/dev/aura/docs/incident-response-messaging.md)
 - [docs/whatsapp-integration.md](C:/dev/aura/docs/whatsapp-integration.md)
 - [docs/automation-rules.md](C:/dev/aura/docs/automation-rules.md)
@@ -187,24 +200,16 @@ Documentos operacionais:
 - [docs/production-validation.md](C:/dev/aura/docs/production-validation.md)
 - [docs/release-checklist.md](C:/dev/aura/docs/release-checklist.md)
 
-## O que foi validado nesta execução
+## O que continua bloqueado neste ambiente
 
-Validado aqui:
+Não foi possível produzir evidência real de:
 
-- typecheck, lint, suíte principal e build do web
-- E2E executável em ambiente normal, mas pulado sem secrets de autenticação
-- inbox web/mobile alinhada em código
-- polling controlado de 15s nas telas de detalhe da cliente
-- observabilidade externa preparada no web, mobile e edge
-- suíte integrada das Edge Functions pronta para ambiente real
-
-Não validado aqui:
-
-- webhook com tráfego real da Meta
+- webhook com tráfego da Meta
 - envio real com número e credenciais reais
-- mobile em simulador/dispositivo
-- staging real com Supabase/Meta configurados
+- validação do mobile em simulador/dispositivo
+- staging-validation completa
+- E2E autenticado completo sem `skip`
 
 Motivo:
 
-- os envs e secrets reais não estavam presentes neste ambiente de trabalho
+- os secrets e envs reais necessários continuam ausentes no ambiente atual

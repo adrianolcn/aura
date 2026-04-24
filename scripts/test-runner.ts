@@ -6,6 +6,7 @@ import { testGroup as authRoutingGroup } from '../apps/web/src/lib/auth-routing.
 import { testGroup as communicationsIntegrationGroup } from '../packages/core/src/communications.integration.test.js';
 import { testGroup as edgeFunctionsIntegrationGroup } from '../packages/core/src/edge-functions.integration.test.js';
 import { testGroup as errorsGroup } from '../packages/core/src/errors.test.js';
+import { testGroup as i18nGroup } from '../packages/core/src/i18n.test.js';
 import { testGroup as servicesGroup } from '../packages/core/src/services.test.js';
 import { testGroup as uploadsGroup } from '../packages/core/src/uploads.test.js';
 import { testGroup as whatsappGroup } from '../packages/core/src/whatsapp.test.js';
@@ -16,6 +17,7 @@ const groups: TestGroup[] = [
   communicationsIntegrationGroup,
   edgeFunctionsIntegrationGroup,
   errorsGroup,
+  i18nGroup,
   servicesGroup,
   uploadsGroup,
   whatsappGroup,

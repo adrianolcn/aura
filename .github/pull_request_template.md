@@ -26,6 +26,8 @@ Descreva o problema, hipótese ou oportunidade que motivou esta mudança.
 5. `corepack pnpm --filter @aura/web build`
 6. Validar web/manual:
 7. Validar mobile/manual:
+8. Se aplicável, `corepack pnpm test:e2e`
+9. Se aplicável, `pnpm db:reset`
 
 ## Banco / migrations
 
@@ -53,7 +55,10 @@ Variáveis novas ou impactadas:
 - [ ] lint local passou
 - [ ] testes passaram
 - [ ] build web passou
+- [ ] E2E foi validado ou o motivo do skip foi documentado
 - [ ] fluxo manual principal foi validado
+- [ ] i18n foi revisado nas áreas tocadas
+- [ ] observabilidade foi revisada nas áreas críticas
 - [ ] documentação foi atualizada
 
 ## Riscos conhecidos

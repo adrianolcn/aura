@@ -10,6 +10,7 @@ import {
   communicationOptInInputSchema,
   contractInputSchema,
   messageSendInputSchema,
+  professionalSchema,
 } from './index';
 
 export const testGroup: TestGroup = {
@@ -28,6 +29,24 @@ export const testGroup: TestGroup = {
     assert.equal(parsed.email, undefined);
     assert.equal(parsed.priorityScore, 78);
     assert.equal(parsed.lifecycleStage, 'lead');
+      },
+    },
+
+    {
+      name: 'defaults professional locale to pt-BR',
+      run: () => {
+        const parsed = professionalSchema.parse({
+          id: '30f21e3f-e367-42cf-95a2-f325255eb4eb',
+          authUserId: '7701c746-24b7-4121-a3cc-686e3631f3d6',
+          fullName: 'Ana Costa',
+          businessName: 'Studio Ana',
+          phone: '71999990000',
+          whatsappPhone: '71999990000',
+          email: 'ana@example.com',
+          createdAt: '2026-04-24T12:00:00.000Z',
+        });
+
+        assert.equal(parsed.locale, 'pt-BR');
       },
     },
 

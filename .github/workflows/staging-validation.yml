@@ -4,9 +4,68 @@ on:
   workflow_dispatch:
 
 jobs:
+  preflight:
+    name: Staging preflight
+    runs-on: ubuntu-latest
+    env:
+      AURA_INTEGRATION_SUPABASE_URL: ${{ secrets.AURA_INTEGRATION_SUPABASE_URL }}
+      AURA_INTEGRATION_SUPABASE_ANON_KEY: ${{ secrets.AURA_INTEGRATION_SUPABASE_ANON_KEY }}
+      AURA_INTEGRATION_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.AURA_INTEGRATION_SUPABASE_SERVICE_ROLE_KEY }}
+      AURA_EDGE_BASE_URL: ${{ secrets.AURA_EDGE_BASE_URL }}
+      WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${{ secrets.WHATSAPP_WEBHOOK_VERIFY_TOKEN }}
+      AUTOMATION_JOB_SECRET: ${{ secrets.AUTOMATION_JOB_SECRET }}
+      AURA_AUTOMATION_DISPATCH_URL: ${{ secrets.AURA_AUTOMATION_DISPATCH_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+    steps:
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          missing=()
+          required=(
+            AURA_INTEGRATION_SUPABASE_URL
+            AURA_INTEGRATION_SUPABASE_ANON_KEY
+            AURA_INTEGRATION_SUPABASE_SERVICE_ROLE_KEY
+            AURA_EDGE_BASE_URL
+            WHATSAPP_ACCESS_TOKEN
+            WHATSAPP_WEBHOOK_VERIFY_TOKEN
+            AUTOMATION_JOB_SECRET
+            AURA_AUTOMATION_DISPATCH_URL
+            NEXT_PUBLIC_SUPABASE_URL
+            NEXT_PUBLIC_SUPABASE_ANON_KEY
+            E2E_USER_EMAIL
+            E2E_USER_PASSWORD
+          )
+
+          for key in "${required[@]}"; do
+            if [ -z "${!key}" ]; then
+              missing+=("$key")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required staging secrets:" >> "$GITHUB_STEP_SUMMARY"
+            for key in "${missing[@]}"; do
+              echo "- $key" >> "$GITHUB_STEP_SUMMARY"
+            done
+            echo "Staging validation aborted because required secrets are missing."
+            exit 1
+          fi
+
+          {
+            echo "Staging preflight passed."
+            echo "- Edge base URL configured"
+            echo "- Supabase integration secrets configured"
+            echo "- WhatsApp and scheduler secrets configured"
+            echo "- E2E authentication secrets configured"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   staging:
     name: Validate staging integration
-    if: ${{ secrets.AURA_INTEGRATION_SUPABASE_URL != '' && secrets.AURA_INTEGRATION_SUPABASE_ANON_KEY != '' && secrets.AURA_INTEGRATION_SUPABASE_SERVICE_ROLE_KEY != '' && secrets.E2E_USER_EMAIL != '' && secrets.E2E_USER_PASSWORD != '' && secrets.NEXT_PUBLIC_SUPABASE_URL != '' && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY != '' }}
+    needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -20,6 +79,10 @@ jobs:
       AURA_INTEGRATION_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.AURA_INTEGRATION_SUPABASE_SERVICE_ROLE_KEY }}
       AURA_EDGE_BASE_URL: ${{ secrets.AURA_EDGE_BASE_URL }}
       AURA_INTEGRATION_META_READY: ${{ secrets.AURA_INTEGRATION_META_READY }}
+      WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+      WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${{ secrets.WHATSAPP_WEBHOOK_VERIFY_TOKEN }}
+      AUTOMATION_JOB_SECRET: ${{ secrets.AUTOMATION_JOB_SECRET }}
+      AURA_AUTOMATION_DISPATCH_URL: ${{ secrets.AURA_AUTOMATION_DISPATCH_URL }}
       E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
       E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
       E2E_CLIENT_NAME: ${{ secrets.E2E_CLIENT_NAME }}
@@ -52,3 +115,11 @@ jobs:
 
       - name: Run E2E against staging
         run: corepack pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-playwright-report
+          path: playwright-report
+          if-no-files-found: ignore

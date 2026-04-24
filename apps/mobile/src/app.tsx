@@ -17,9 +17,6 @@ import {
   createContract,
   createSignedStorageUrl,
   dispatchAutomationRules,
-  formatCurrency,
-  formatDate,
-  formatDateTime,
   formatFileSize,
   getAuthState,
   getConversationWindowState,
@@ -43,6 +40,7 @@ import {
   useClientWorkspaceSnapshot,
   useClients,
   useDashboardSummary,
+  useI18n,
 } from '@aura/core';
 import type {
   AppointmentInput,
@@ -74,6 +72,7 @@ import {
 } from '@/components/ui';
 import { DateTimeField } from '@/components/date-time-field';
 import { pickSingleFile, type PickedFile } from '@/files';
+import { MobileI18nProvider } from '@/i18n';
 import { initializeMobileObservability } from '@/observability';
 import { mobileSupabaseClient } from '@/supabase';
 import { colors } from '@/theme';
@@ -135,12 +134,6 @@ const contractStatusOptions: Array<ChoiceOption<ContractInput['status']>> = [
   { label: 'Enviado', value: 'sent' },
   { label: 'Assinado', value: 'signed' },
   { label: 'Cancelado', value: 'cancelled' },
-];
-
-const agendaFilterOptions: Array<ChoiceOption<'today' | 'next7' | 'all'>> = [
-  { label: 'Hoje', value: 'today' },
-  { label: '7 dias', value: 'next7' },
-  { label: 'Tudo', value: 'all' },
 ];
 
 const clientInitialForm: ClientInput = {
@@ -208,6 +201,7 @@ export function AuraMobileApp() {
   });
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const preferredLocale = authState.professional?.locale;
 
   useEffect(() => {
     initializeMobileObservability();
@@ -248,9 +242,11 @@ export function AuraMobileApp() {
   if (authState.loading) {
     return (
       <SafeAreaProvider>
-        <ScreenShell title="AURA mobile" subtitle="Carregando sessão e restaurando o workspace.">
-          <SectionCard title="Inicializando" description="Conectando ao Supabase e preparando a operação real." />
-        </ScreenShell>
+        <MobileI18nProvider preferredLocale={preferredLocale}>
+          <ScreenShell title="AURA mobile" subtitle="Carregando sessão e restaurando o workspace.">
+            <SectionCard title="Inicializando" description="Conectando ao Supabase e preparando a operação real." />
+          </ScreenShell>
+        </MobileI18nProvider>
       </SafeAreaProvider>
     );
   }
@@ -258,12 +254,14 @@ export function AuraMobileApp() {
   if (!mobileSupabaseClient) {
     return (
       <SafeAreaProvider>
-        <ScreenShell title="AURA mobile" subtitle="Auth real requer configuração do Supabase.">
-          <SectionCard
-            title="Configuração pendente"
-            description="Defina EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY para habilitar login real no mobile."
-          />
-        </ScreenShell>
+        <MobileI18nProvider preferredLocale={preferredLocale}>
+          <ScreenShell title="AURA mobile" subtitle="Auth real requer configuração do Supabase.">
+            <SectionCard
+              title="Configuração pendente"
+              description="Defina EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY para habilitar login real no mobile."
+            />
+          </ScreenShell>
+        </MobileI18nProvider>
       </SafeAreaProvider>
     );
   }
@@ -273,63 +271,68 @@ export function AuraMobileApp() {
   if (!authState.professional) {
     return (
       <SafeAreaProvider>
-        <LoginScreen
-          onAuthenticated={async () => {
-            const auth = await getAuthState(supabaseClient);
-            setAuthState({
-              loading: false,
-              professional: auth.professional,
-            });
-          }}
-        />
+        <MobileI18nProvider preferredLocale={preferredLocale}>
+          <LoginScreen
+            onAuthenticated={async () => {
+              const auth = await getAuthState(supabaseClient);
+              setAuthState({
+                loading: false,
+                professional: auth.professional,
+              });
+            }}
+          />
+        </MobileI18nProvider>
       </SafeAreaProvider>
     );
   }
 
   return (
     <SafeAreaProvider>
-      {selectedClientId ? (
-        <ClientDetailScreen
-          clientId={selectedClientId}
-          activeTab={activeTab}
-          onBack={() => setSelectedClientId(null)}
-          onChangeTab={(tab) => {
-            setSelectedClientId(null);
-            setActiveTab(tab);
-          }}
-        />
-      ) : activeTab === 'dashboard' ? (
-        <DashboardScreen
-          activeTab={activeTab}
-          onChangeTab={setActiveTab}
-          onOpenClient={setSelectedClientId}
-          professional={authState.professional}
-        />
-      ) : activeTab === 'clients' ? (
-        <ClientsScreen
-          activeTab={activeTab}
-          onChangeTab={setActiveTab}
-          onOpenClient={setSelectedClientId}
-        />
-      ) : activeTab === 'agenda' ? (
-        <AgendaScreen activeTab={activeTab} onChangeTab={setActiveTab} />
-      ) : (
-        <NotificationsScreen
-          activeTab={activeTab}
-          onChangeTab={setActiveTab}
-          onSignOut={async () => {
-            await signOut(supabaseClient);
-            setActiveTab('dashboard');
-          }}
-          professional={authState.professional}
-        />
-      )}
+      <MobileI18nProvider preferredLocale={preferredLocale}>
+        {selectedClientId ? (
+          <ClientDetailScreen
+            clientId={selectedClientId}
+            activeTab={activeTab}
+            onBack={() => setSelectedClientId(null)}
+            onChangeTab={(tab) => {
+              setSelectedClientId(null);
+              setActiveTab(tab);
+            }}
+          />
+        ) : activeTab === 'dashboard' ? (
+          <DashboardScreen
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            onOpenClient={setSelectedClientId}
+            professional={authState.professional}
+          />
+        ) : activeTab === 'clients' ? (
+          <ClientsScreen
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            onOpenClient={setSelectedClientId}
+          />
+        ) : activeTab === 'agenda' ? (
+          <AgendaScreen activeTab={activeTab} onChangeTab={setActiveTab} />
+        ) : (
+          <NotificationsScreen
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            onSignOut={async () => {
+              await signOut(supabaseClient);
+              setActiveTab('dashboard');
+            }}
+            professional={authState.professional}
+          />
+        )}
+      </MobileI18nProvider>
     </SafeAreaProvider>
   );
 }
 
 function LoginScreen({ onAuthenticated }: { onAuthenticated: () => Promise<void> }) {
   const supabaseClient = mobileSupabaseClient;
+  const { t } = useI18n();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [signInData, setSignInData] = useState<AuthSignInInput>({
     email: '',
@@ -366,7 +369,7 @@ function LoginScreen({ onAuthenticated }: { onAuthenticated: () => Promise<void>
         if (response.data.session) {
           await onAuthenticated();
         } else {
-          setMessage('Conta criada. Confirme o email para concluir o acesso.');
+          setMessage(t('auth.signupConfirmation'));
           setMode('sign-in');
           setSignInData({
             email: signUpData.email,
@@ -383,29 +386,29 @@ function LoginScreen({ onAuthenticated }: { onAuthenticated: () => Promise<void>
 
   return (
     <ScreenShell
-      title="AURA mobile"
-      subtitle="Acesso real ao núcleo operacional da agenda, clientes, orçamentos, contratos e arquivos."
+      title={t('mobile.loginTitle')}
+      subtitle={t('mobile.loginSubtitle')}
     >
       <SectionCard
-        title={mode === 'sign-in' ? 'Entrar' : 'Criar conta'}
+        title={mode === 'sign-in' ? t('auth.eyebrow') : t('auth.switchToSignUp')}
         description="Sessão persistida no dispositivo com segregação multi-tenant por profissional."
       >
         {mode === 'sign-up' ? (
           <>
             <MobileField
-              label="Nome completo"
+              label={t('auth.fullName')}
               value={signUpData.fullName}
               onChangeText={(value) => setSignUpData((current) => ({ ...current, fullName: value }))}
             />
             <MobileField
-              label="Negócio"
+              label={t('auth.businessName')}
               value={signUpData.businessName}
               onChangeText={(value) =>
                 setSignUpData((current) => ({ ...current, businessName: value }))
               }
             />
             <MobileField
-              label="Telefone"
+              label={t('auth.phone')}
               value={signUpData.phone}
               onChangeText={(value) => setSignUpData((current) => ({ ...current, phone: value }))}
             />
@@ -413,7 +416,7 @@ function LoginScreen({ onAuthenticated }: { onAuthenticated: () => Promise<void>
         ) : null}
 
         <MobileField
-          label="Email"
+          label={t('auth.email')}
           value={mode === 'sign-in' ? signInData.email : signUpData.email}
           onChangeText={(value) =>
             mode === 'sign-in'
@@ -423,7 +426,7 @@ function LoginScreen({ onAuthenticated }: { onAuthenticated: () => Promise<void>
           keyboardType="email-address"
         />
         <MobileField
-          label="Senha"
+          label={t('auth.password')}
           value={mode === 'sign-in' ? signInData.password : signUpData.password}
           onChangeText={(value) =>
             mode === 'sign-in'
@@ -437,11 +440,11 @@ function LoginScreen({ onAuthenticated }: { onAuthenticated: () => Promise<void>
         {message ? <FeedbackCard tone="success" message={message} /> : null}
 
         <ActionButton
-          label={loading ? 'Processando...' : mode === 'sign-in' ? 'Entrar' : 'Criar conta'}
+          label={loading ? t('common.processing') : mode === 'sign-in' ? t('auth.eyebrow') : t('auth.switchToSignUp')}
           onPress={() => void handleAuth()}
         />
         <ActionButton
-          label={mode === 'sign-in' ? 'Criar conta' : 'Já tenho conta'}
+          label={mode === 'sign-in' ? t('auth.switchToSignUp') : t('auth.switchToSignIn')}
           onPress={() =>
             setMode((value) => (value === 'sign-in' ? 'sign-up' : 'sign-in'))
           }
@@ -463,11 +466,12 @@ function DashboardScreen({
   onOpenClient: (clientId: string) => void;
   professional: Professional;
 }) {
+  const { t, formatCurrency, formatDateTime, appointmentStatusLabel } = useI18n();
   const { data, loading, error } = useDashboardSummary(mobileSupabaseClient);
 
   return (
     <ScreenShell
-      title="Resumo do dia"
+      title={t('dashboard.title')}
       subtitle={`${professional.businessName} • tenant pronto para operação real.`}
       footer={<BottomNav activeTab={activeTab} onChange={(tab) => onChangeTab(tab as TabKey)} />}
     >
@@ -475,18 +479,18 @@ function DashboardScreen({
 
       <View style={styles.metricGrid}>
         <MetricCard
-          label="Clientes ativas"
+          label={t('dashboard.activeClients')}
           value={String(data?.activeClients ?? 0)}
-          helper="Carteira persistida por profissional."
+          helper={t('dashboard.activeClientsHelper')}
         />
         <MetricCard
-          label="Pipeline"
+          label={t('dashboard.pipeline')}
           value={formatCurrency(data?.revenuePipeline ?? 0)}
-          helper="Receita potencial em negociação."
+          helper={t('dashboard.pipelineHelper')}
         />
       </View>
 
-      <SectionCard title="Próximos compromissos" description="Agenda real puxada do Supabase.">
+      <SectionCard title={t('dashboard.nextAppointments')} description={t('dashboard.nextAppointmentsDescription')}>
         {loading ? (
           <Text style={styles.helperText}>Carregando próximos compromissos...</Text>
         ) : data?.nextAppointments.length ? (
@@ -497,19 +501,19 @@ function DashboardScreen({
                 <Text style={styles.rowSubtitle}>{formatDateTime(appointment.startsAt)}</Text>
               </View>
               <Pill tone={appointment.status === 'confirmed' ? 'success' : 'accent'}>
-                {appointment.status}
+                {appointmentStatusLabel(appointment.status)}
               </Pill>
             </View>
           ))
         ) : (
           <EmptyCard
-            title="Nenhum compromisso próximo"
-            description="Quando houver novos agendamentos, eles aparecem aqui."
+            title={t('agenda.emptyTitle')}
+            description={t('dashboard.nextAppointmentsDescription')}
           />
         )}
       </SectionCard>
 
-      <SectionCard title="Clientes prioritárias" description="Carteira com score operacional.">
+      <SectionCard title={t('dashboard.topClients')} description={t('dashboard.topClientsDescription')}>
         {data?.topClients.length ? (
           data.topClients.map((client) => (
             <Pressable key={client.id} onPress={() => onOpenClient(client.id)} style={styles.rowCard}>
@@ -540,6 +544,7 @@ function ClientsScreen({
   onChangeTab: (tab: TabKey) => void;
   onOpenClient: (clientId: string) => void;
 }) {
+  const { t, lifecycleStageLabel } = useI18n();
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [clientForm, setClientForm] = useState<ClientInput>(clientInitialForm);
@@ -551,6 +556,16 @@ function ClientsScreen({
     orderBy: 'updatedAt',
     orderDirection: 'desc',
   });
+  const localizedLifecycleStageOptions = useMemo(
+    () => [
+      { label: lifecycleStageLabel('lead'), value: 'lead' },
+      { label: lifecycleStageLabel('qualified'), value: 'qualified' },
+      { label: lifecycleStageLabel('proposal'), value: 'proposal' },
+      { label: lifecycleStageLabel('confirmed'), value: 'confirmed' },
+      { label: lifecycleStageLabel('archived'), value: 'archived' },
+    ],
+    [lifecycleStageLabel],
+  );
 
   const handleCreateClient = async () => {
     if (!mobileSupabaseClient || busy) {
@@ -565,7 +580,7 @@ function ClientsScreen({
       await upsertClient(mobileSupabaseClient, clientInputSchema.parse(clientForm));
       setClientForm(clientInitialForm);
       setShowCreate(false);
-      setMessage('Cliente criada com sucesso.');
+      setMessage(t('clients.saved'));
       reload();
     } catch (reason) {
       setActionError(toUserMessage(reason, 'Não foi possível salvar a cliente.'));
@@ -576,16 +591,16 @@ function ClientsScreen({
 
   return (
     <ScreenShell
-      title="Clientes"
+      title={t('nav.clients')}
       subtitle="Busca real por nome ou telefone, cadastro e acesso ao detalhe operacional."
       footer={<BottomNav activeTab={activeTab} onChange={(tab) => onChangeTab(tab as TabKey)} />}
     >
-      <SectionCard title="Busca rápida" description="Nome e telefone são os atalhos principais da operação.">
+      <SectionCard title={t('clients.search')} description="Nome e telefone são os atalhos principais da operação.">
         <MobileField
-          label="Buscar cliente"
+          label={t('clients.search')}
           value={search}
           onChangeText={setSearch}
-          placeholder="Nome ou telefone"
+          placeholder={t('clients.searchPlaceholder')}
         />
       </SectionCard>
 
@@ -594,41 +609,41 @@ function ClientsScreen({
       {message ? <FeedbackCard tone="success" message={message} /> : null}
 
       <SectionCard
-        title="Nova cliente"
+        title={t('clients.new')}
         description="Cadastro persistido no Supabase com validação compartilhada por Zod."
       >
         {showCreate ? (
           <View style={styles.cardBody}>
             <MobileField
-              label="Nome completo"
+              label={t('clients.fullName')}
               value={clientForm.fullName}
               onChangeText={(value) => setClientForm((current) => ({ ...current, fullName: value }))}
             />
             <MobileField
-              label="Telefone"
+              label={t('auth.phone')}
               value={clientForm.phone}
               onChangeText={(value) => setClientForm((current) => ({ ...current, phone: value }))}
             />
             <MobileField
-              label="Email"
+              label={t('auth.email')}
               value={clientForm.email ?? ''}
               onChangeText={(value) => setClientForm((current) => ({ ...current, email: value }))}
               keyboardType="email-address"
             />
             <MobileField
-              label="Cidade"
+              label={t('clients.city')}
               value={clientForm.city ?? ''}
               onChangeText={(value) => setClientForm((current) => ({ ...current, city: value }))}
             />
             <MobileField
-              label="Instagram"
+              label={t('clients.instagram')}
               value={clientForm.instagramHandle ?? ''}
               onChangeText={(value) =>
                 setClientForm((current) => ({ ...current, instagramHandle: value }))
               }
             />
             <MobileField
-              label="Score de prioridade"
+              label={t('clients.priorityScore')}
               value={String(clientForm.priorityScore)}
               onChangeText={(value) =>
                 setClientForm((current) => ({
@@ -639,35 +654,38 @@ function ClientsScreen({
               keyboardType="numeric"
             />
             <ChoiceField
-              label="Etapa"
+              label={t('clients.lifecycleStage')}
               value={clientForm.lifecycleStage}
-              options={lifecycleStageOptions}
+              options={localizedLifecycleStageOptions}
               onChange={(value) =>
-                setClientForm((current) => ({ ...current, lifecycleStage: value }))
+                setClientForm((current) => ({
+                  ...current,
+                  lifecycleStage: value as ClientInput['lifecycleStage'],
+                }))
               }
             />
             <MobileField
-              label="Observações"
+              label={t('clients.notes')}
               value={clientForm.notes ?? ''}
               onChangeText={(value) => setClientForm((current) => ({ ...current, notes: value }))}
               multiline
             />
             <ActionButton
-              label={busy ? 'Salvando...' : 'Salvar cliente'}
+              label={busy ? t('common.processing') : t('common.save')}
               onPress={() => void handleCreateClient()}
             />
             <ActionButton
-              label="Cancelar"
+              label={t('common.cancel')}
               onPress={() => setShowCreate(false)}
               variant="secondary"
             />
           </View>
         ) : (
-          <ActionButton label="Cadastrar cliente" onPress={() => setShowCreate(true)} />
+          <ActionButton label={t('clients.save')} onPress={() => setShowCreate(true)} />
         )}
       </SectionCard>
 
-      <SectionCard title="Carteira" description="Lista real com loading, vazio e erro tratados.">
+      <SectionCard title={t('clients.pipelineTitle')} description="Lista real com loading, vazio e erro tratados.">
         {loading ? (
           <Text style={styles.helperText}>Carregando clientes...</Text>
         ) : data?.length ? (
@@ -677,18 +695,18 @@ function ClientsScreen({
                 <View style={styles.rowText}>
                   <Text style={styles.rowTitle}>{item.fullName}</Text>
                   <Text style={styles.rowSubtitle}>{item.phone}</Text>
-                  <Text style={styles.rowCaption}>{item.city ?? 'Cidade não informada'}</Text>
+                  <Text style={styles.rowCaption}>{item.city ?? t('common.notInformed')}</Text>
                 </View>
                 <Pill tone={item.lifecycleStage === 'confirmed' ? 'success' : 'accent'}>
-                  {item.lifecycleStage}
+                  {lifecycleStageLabel(item.lifecycleStage)}
                 </Pill>
               </Pressable>
             ))}
           </View>
         ) : (
           <EmptyCard
-            title="Nenhuma cliente encontrada"
-            description="Ajuste a busca ou crie a primeira cliente para começar a operar no mobile."
+            title={t('clients.emptyTitle')}
+            description={t('clients.emptyDescription')}
           />
         )}
       </SectionCard>
@@ -707,6 +725,16 @@ function ClientDetailScreen({
   activeTab: TabKey;
   onChangeTab: (tab: TabKey) => void;
 }) {
+  const {
+    t,
+    formatCurrency,
+    formatDate,
+    formatDateTime,
+    eventStatusLabel,
+    appointmentStatusLabel,
+    budgetStatusLabel,
+    messageStatusLabel,
+  } = useI18n();
   const { data, loading, error, reload } = useClientWorkspaceSnapshot(
     mobileSupabaseClient,
     clientId,
@@ -789,7 +817,7 @@ function ClientDetailScreen({
         id: eventItem.id,
         label: `${eventItem.title} • ${formatDateTime(eventItem.eventDate)}`,
       })),
-    [data?.events],
+    [data?.events, formatDateTime],
   );
   const selectedTemplate = useMemo(
     () =>
@@ -825,12 +853,12 @@ function ClientDetailScreen({
           action: label,
           clientId,
         });
-        setActionError(toUserMessage(reason, 'Não foi possível concluir a ação.'));
+        setActionError(toUserMessage(reason, t('clientDetail.error.actionFailed')));
       } finally {
         setBusyAction(null);
       }
     },
-    [busyAction, clientId, reload, reloadCommunication],
+    [busyAction, clientId, reload, reloadCommunication, t],
   );
 
   const openFile = useCallback(
@@ -854,19 +882,19 @@ function ClientDetailScreen({
           path,
           clientId,
         });
-        setActionError(toUserMessage(reason, 'Não foi possível abrir o arquivo.'));
+        setActionError(toUserMessage(reason, t('clientDetail.assets.openError')));
       }
     },
-    [clientId],
+    [clientId, t],
   );
 
   return (
     <ScreenShell
-      title={data?.client.fullName ?? 'Cliente'}
-      subtitle="Resumo, timeline, agenda, orçamento, contratos e arquivos reais no dispositivo."
+      title={data?.client.fullName ?? t('nav.clients')}
+      subtitle={t('clientDetail.mobile.subtitle')}
       footer={<BottomNav activeTab={activeTab} onChange={(tab) => onChangeTab(tab as TabKey)} />}
     >
-      <ActionButton label="Voltar para clientes" onPress={onBack} variant="secondary" />
+      <ActionButton label={t('common.backToClients')} onPress={onBack} variant="secondary" />
 
       {error ? <FeedbackCard tone="error" message={error} /> : null}
       {communicationError ? <FeedbackCard tone="error" message={communicationError} /> : null}
@@ -874,54 +902,54 @@ function ClientDetailScreen({
       {message ? <FeedbackCard tone="success" message={message} /> : null}
 
       {loading || communicationLoading || !data || !communicationData ? (
-        <SectionCard title="Carregando" description="Buscando o workspace completo da cliente." />
+        <SectionCard title={t('common.loading')} description={t('mobile.clientDetail.loadingDescription')} />
       ) : (
         <>
           <View style={styles.metricGrid}>
             <MetricCard
-              label="Eventos"
+              label={t('clientDetail.stats.eventsLabel')}
               value={String(data.events.length)}
-              helper="Eventos persistidos por cliente."
+              helper={t('clientDetail.stats.eventsHelper')}
             />
             <MetricCard
-              label="Contratos"
+              label={t('nav.contracts')}
               value={String(data.contracts.length)}
-              helper="PDFs versionados no Storage."
+              helper={t('clientDetail.stats.contractsHelper')}
             />
           </View>
 
-          <SectionCard title="Resumo" description="Dados centrais da cliente com edição real.">
+          <SectionCard title={t('clientDetail.summary.title')} description={t('clientDetail.summary.description')}>
             <View style={styles.cardBody}>
               <MobileField
-                label="Nome completo"
+                label={t('clients.fullName')}
                 value={clientForm.fullName}
                 onChangeText={(value) => setClientForm((current) => ({ ...current, fullName: value }))}
               />
               <MobileField
-                label="Telefone"
+                label={t('clients.phone')}
                 value={clientForm.phone}
                 onChangeText={(value) => setClientForm((current) => ({ ...current, phone: value }))}
               />
               <MobileField
-                label="Email"
+                label={t('clients.email')}
                 value={clientForm.email ?? ''}
                 onChangeText={(value) => setClientForm((current) => ({ ...current, email: value }))}
                 keyboardType="email-address"
               />
               <MobileField
-                label="Cidade"
+                label={t('clients.city')}
                 value={clientForm.city ?? ''}
                 onChangeText={(value) => setClientForm((current) => ({ ...current, city: value }))}
               />
               <MobileField
-                label="Instagram"
+                label={t('clients.instagram')}
                 value={clientForm.instagramHandle ?? ''}
                 onChangeText={(value) =>
                   setClientForm((current) => ({ ...current, instagramHandle: value }))
                 }
               />
               <MobileField
-                label="Score de prioridade"
+                label={t('clients.priorityScore')}
                 value={String(clientForm.priorityScore)}
                 onChangeText={(value) =>
                   setClientForm((current) => ({
@@ -932,7 +960,7 @@ function ClientDetailScreen({
                 keyboardType="numeric"
               />
               <ChoiceField
-                label="Etapa"
+                label={t('clients.stage')}
                 value={clientForm.lifecycleStage}
                 options={lifecycleStageOptions}
                 onChange={(value) =>
@@ -940,13 +968,13 @@ function ClientDetailScreen({
                 }
               />
               <MobileField
-                label="Observações"
+                label={t('clients.notes')}
                 value={clientForm.notes ?? ''}
                 onChangeText={(value) => setClientForm((current) => ({ ...current, notes: value }))}
                 multiline
               />
               <ActionButton
-                label={busyAction === 'save-client' ? 'Salvando...' : 'Salvar cliente'}
+                label={busyAction === 'save-client' ? t('common.processing') : t('clientDetail.summary.save')}
                 onPress={() =>
                   void runAction(
                     'save-client',
@@ -957,14 +985,14 @@ function ClientDetailScreen({
                         clientId,
                       );
                     },
-                    'Cliente atualizada com sucesso.',
+                    t('clientDetail.summary.saved'),
                   )
                 }
               />
             </View>
           </SectionCard>
 
-          <SectionCard title="Timeline" description="Linha do tempo real e ordenada da cliente.">
+          <SectionCard title={t('clientDetail.timeline.title')} description={t('clientDetail.timeline.description')}>
             {data.timeline.length ? (
               data.timeline.slice(0, 8).map((item) => (
                 <View key={item.id} style={styles.timelineItem}>
@@ -975,39 +1003,44 @@ function ClientDetailScreen({
               ))
             ) : (
               <EmptyCard
-                title="Timeline vazia"
-                description="Quando você criar eventos, orçamentos, contratos ou uploads, o histórico aparece aqui."
+                title={t('clientDetail.timeline.emptyTitle')}
+                description={t('clientDetail.timeline.empty')}
               />
             )}
           </SectionCard>
 
           <SectionCard
-            title="Conversa"
-            description="Inbox operacional com histórico persistido, opt-in, templates aprovados e respostas livres dentro da janela do WhatsApp."
+            title={t('clientDetail.inbox.title')}
+            description={t('clientDetail.inbox.description')}
           >
             <View style={styles.cardBody}>
               <View style={styles.inlineCard}>
                 <View style={styles.rowCard}>
                   <View style={styles.rowText}>
-                    <Text style={styles.rowTitle}>Consentimento WhatsApp</Text>
+                    <Text style={styles.rowTitle}>{t('clientDetail.inbox.optInTitle')}</Text>
                     <Text style={styles.rowCaption}>
                       {communicationData.optIn
-                        ? `Status ${communicationData.optIn.status} • origem ${communicationData.optIn.source}`
-                        : 'Nenhum opt-in registrado ainda.'}
+                        ? t('clientDetail.inbox.optInStatus', {
+                            status: communicationData.optIn.status,
+                            source: communicationData.optIn.source,
+                          })
+                        : t('clientDetail.inbox.optInEmpty')}
                     </Text>
                   </View>
                   <Pill tone={communicationData.optIn?.status === 'opted_in' ? 'success' : 'warning'}>
-                    {communicationData.optIn?.status ?? 'pendente'}
+                    {communicationData.optIn?.status ?? t('clientDetail.inbox.pending')}
                   </Pill>
                 </View>
                 <Text style={styles.rowCaption}>
                   {communicationData.optIn?.grantedAt
-                    ? `Concedido em ${formatDateTime(communicationData.optIn.grantedAt)}`
-                    : 'Registre o consentimento antes de disparar templates operacionais e automações.'}
+                    ? t('clientDetail.inbox.optInGrantedAt', {
+                        value: formatDateTime(communicationData.optIn.grantedAt),
+                      })
+                    : t('clientDetail.inbox.optInHint')}
                 </Text>
                 <View style={styles.actionRow}>
                   <ActionButton
-                    label={busyAction === 'opt-in' ? 'Salvando...' : 'Registrar opt-in'}
+                    label={busyAction === 'opt-in' ? t('common.processing') : t('clientDetail.inbox.registerOptIn')}
                     disabled={Boolean(busyAction)}
                     onPress={() =>
                       void runAction(
@@ -1020,12 +1053,12 @@ function ClientDetailScreen({
                             source: 'manual',
                           });
                         },
-                        'Opt-in registrado com sucesso.',
+                        t('clientDetail.inbox.optInSaved'),
                       )
                     }
                   />
                   <ActionButton
-                    label={busyAction === 'opt-out' ? 'Atualizando...' : 'Revogar'}
+                    label={busyAction === 'opt-out' ? t('common.processing') : t('clientDetail.inbox.revokeOptIn')}
                     disabled={Boolean(busyAction)}
                     onPress={() =>
                       void runAction(
@@ -1038,7 +1071,7 @@ function ClientDetailScreen({
                             source: 'manual',
                           });
                         },
-                        'Consentimento revogado com sucesso.',
+                        t('clientDetail.inbox.optOutSaved'),
                       )
                     }
                     variant="secondary"
@@ -1049,24 +1082,24 @@ function ClientDetailScreen({
               <View style={styles.inlineCard}>
                 <Text style={styles.rowTitle}>
                   {conversationWindow.status === 'open'
-                    ? 'Janela de atendimento aberta'
+                    ? t('clientDetail.inbox.windowOpen')
                     : conversationWindow.status === 'expired'
-                      ? 'Janela de atendimento expirada'
-                      : 'Janela de atendimento indisponível'}
+                      ? t('clientDetail.inbox.windowExpired')
+                      : t('clientDetail.inbox.windowUnavailable')}
                 </Text>
                 <Text style={styles.rowCaption}>{conversationWindow.helperText}</Text>
-                <Text style={styles.timelineDate}>Sincronizacao automatica a cada 15 segundos.</Text>
+                <Text style={styles.timelineDate}>{t('common.automaticSync')}</Text>
               </View>
 
               <View style={styles.inlineCard}>
-                <Text style={styles.rowTitle}>Template operacional</Text>
+                <Text style={styles.rowTitle}>{t('clientDetail.inbox.templateTitle')}</Text>
                 <Text style={styles.rowCaption}>
-                  Use template aprovado para iniciar conversa fora da janela de 24h ou para fluxos operacionais governados.
+                  {t('clientDetail.inbox.templateDescription')}
                 </Text>
                 {communicationData.templates.length ? (
                   <>
                     <ChoiceField
-                      label="Template"
+                      label={t('clientDetail.inbox.templateField')}
                       value={selectedTemplateId}
                       options={communicationData.templates.map((template) => ({
                         label: template.name,
@@ -1086,13 +1119,13 @@ function ClientDetailScreen({
                     {selectedTemplate ? (
                       <View style={styles.inlineCard}>
                         <Text style={styles.rowTitle}>
-                          {selectedTemplate.externalTemplateName ?? 'Mapeamento pendente'}
+                          {selectedTemplate.externalTemplateName ?? t('clientDetail.inbox.mappingPending')}
                         </Text>
                         <Text style={styles.rowCaption}>{selectedTemplate.body}</Text>
                         <Text style={styles.timelineDate}>
                           {selectedTemplate.requiresOptIn
-                            ? 'Exige opt-in'
-                            : 'Sem opt-in obrigatório'}
+                            ? t('clientDetail.inbox.templateRequiresOptIn')
+                            : t('clientDetail.inbox.templateNoOptIn')}
                         </Text>
                       </View>
                     ) : null}
@@ -1115,11 +1148,11 @@ function ClientDetailScreen({
                     {!selectedTemplateAllowsSend ? (
                       <FeedbackCard
                         tone="warning"
-                        message="Este template exige opt-in válido antes do envio."
+                        message={t('clientDetail.inbox.templateBlocked')}
                       />
                     ) : null}
                     <ActionButton
-                      label={busyAction === 'send-template' ? 'Enviando...' : 'Enviar template'}
+                      label={busyAction === 'send-template' ? t('common.processing') : t('clientDetail.inbox.sendTemplate')}
                       disabled={
                         Boolean(busyAction) ||
                         !selectedTemplateId ||
@@ -1131,7 +1164,7 @@ function ClientDetailScreen({
                           async () => {
                             if (!selectedTemplateId || !selectedTemplateAllowsSend) {
                               throw new Error(
-                                'Selecione um template válido e confirme o opt-in antes do envio.',
+                                t('clientDetail.inbox.templateSelectionError'),
                               );
                             }
 
@@ -1143,37 +1176,37 @@ function ClientDetailScreen({
                               eventId: data.events[0]?.id,
                             });
                           },
-                          'Template enviado com sucesso.',
+                          t('clientDetail.inbox.templateSent'),
                         )
                       }
                     />
                   </>
                 ) : (
                   <EmptyCard
-                    title="Sem templates ativos"
-                    description="Cadastre um template aprovado no WhatsApp para habilitar mensagens iniciadas pela empresa."
+                    title={t('clientDetail.inbox.noTemplatesTitle')}
+                    description={t('clientDetail.inbox.noTemplatesDescription')}
                   />
                 )}
               </View>
 
               <View style={styles.inlineCard}>
-                <Text style={styles.rowTitle}>Responder cliente</Text>
+                <Text style={styles.rowTitle}>{t('clientDetail.inbox.replyTitle')}</Text>
                 <Text style={styles.rowCaption}>
-                  Texto livre só fica disponível enquanto a janela de atendimento estiver aberta.
+                  {t('clientDetail.inbox.replyDescription')}
                 </Text>
                 <MobileField
-                  label="Mensagem"
+                  label={t('common.message')}
                   value={messageBody}
                   onChangeText={setMessageBody}
                   multiline
                   placeholder={
                     conversationWindow.canSendFreeText
-                      ? 'Digite uma resposta operacional ou contextual.'
-                      : 'Fora da janela de 24h, use um template aprovado.'
+                      ? t('clientDetail.inbox.replyPlaceholder')
+                      : t('mobile.inboxBlocked')
                   }
                 />
                 <ActionButton
-                  label={busyAction === 'send-text' ? 'Enviando...' : 'Enviar resposta'}
+                  label={busyAction === 'send-text' ? t('common.processing') : t('clientDetail.inbox.sendReply')}
                   disabled={
                     Boolean(busyAction) ||
                     !messageBody.trim() ||
@@ -1185,7 +1218,7 @@ function ClientDetailScreen({
                       async () => {
                         if (!conversationWindow.canSendFreeText) {
                           throw new Error(
-                            'A janela de atendimento expirou. Use um template aprovado para iniciar a conversa.',
+                            t('clientDetail.inbox.windowExpiredError'),
                           );
                         }
 
@@ -1198,7 +1231,7 @@ function ClientDetailScreen({
                         });
                         setMessageBody('');
                       },
-                      'Resposta enviada com sucesso.',
+                      t('clientDetail.inbox.replySent'),
                     )
                   }
                   variant={conversationWindow.canSendFreeText ? 'primary' : 'secondary'}
@@ -1206,7 +1239,7 @@ function ClientDetailScreen({
               </View>
 
               <View style={styles.inlineCard}>
-                <Text style={styles.rowTitle}>Histórico</Text>
+                <Text style={styles.rowTitle}>{t('common.history')}</Text>
                 {communicationData.conversation?.messages.length ? (
                   communicationData.conversation.messages.map((conversationMessage) => (
                     <View
@@ -1229,7 +1262,7 @@ function ClientDetailScreen({
                             ]}
                           >
                             {conversationMessage.messageType === 'template'
-                              ? conversationMessage.templateName ?? 'Template operacional'
+                              ? conversationMessage.templateName ?? t('clientDetail.inbox.templateFallback')
                               : conversationMessage.body}
                           </Text>
                           {conversationMessage.messageType === 'template' ? (
@@ -1254,7 +1287,7 @@ function ClientDetailScreen({
                                 : 'accent'
                           }
                         >
-                          {conversationMessage.status}
+                          {messageStatusLabel(conversationMessage.status)}
                         </Pill>
                       </View>
                       {conversationMessage.errorMessage ? (
@@ -1265,8 +1298,8 @@ function ClientDetailScreen({
                         <ActionButton
                           label={
                             busyAction === `retry-message-${conversationMessage.id}`
-                              ? 'Reenviando...'
-                              : 'Reenviar'
+                              ? t('common.processing')
+                              : t('common.retry')
                           }
                           disabled={Boolean(busyAction)}
                           onPress={() =>
@@ -1278,7 +1311,7 @@ function ClientDetailScreen({
                                   buildRetryMessageInput(clientId, conversationMessage),
                                 );
                               },
-                              'Mensagem reenviada com sucesso.',
+                              t('clientDetail.inbox.retrySent'),
                             )
                           }
                           variant="secondary"
@@ -1298,19 +1331,19 @@ function ClientDetailScreen({
                   ))
                 ) : (
                   <EmptyCard
-                    title="Nenhuma conversa registrada"
-                    description="Quando a cliente responder ou você enviar um template, o histórico aparece aqui."
+                    title={t('clientDetail.inbox.historyEmptyTitle')}
+                    description={t('clientDetail.inbox.historyEmpty')}
                   />
                 )}
               </View>
 
               <View style={styles.inlineCard}>
-                <Text style={styles.rowTitle}>Automações e scheduler</Text>
+                <Text style={styles.rowTitle}>{t('clientDetail.inbox.automationTitle')}</Text>
                 <Text style={styles.rowCaption}>
-                  Lembretes e follow-up operacionais com prevenção básica de duplicidade.
+                  {t('clientDetail.inbox.automationDescription')}
                 </Text>
                 <ActionButton
-                  label={busyAction === 'dispatch-automation' ? 'Executando...' : 'Executar automações'}
+                  label={busyAction === 'dispatch-automation' ? t('common.processing') : t('clientDetail.inbox.runAutomations')}
                   disabled={Boolean(busyAction)}
                   onPress={() =>
                     void runAction(
@@ -1320,10 +1353,14 @@ function ClientDetailScreen({
                           clientId,
                         });
                         setMessage(
-                          `${result.processedCount} automação(ões) processada(s), ${result.skippedCount} pulada(s) e ${result.failedCount} falha(s).`,
+                          t('clientDetail.inbox.automationResult', {
+                            processed: String(result.processedCount),
+                            skipped: String(result.skippedCount),
+                            failed: String(result.failedCount),
+                          }),
                         );
                       },
-                      'Automações executadas.',
+                      t('clientDetail.inbox.runAutomations'),
                     )
                   }
                   variant="secondary"
@@ -1332,7 +1369,10 @@ function ClientDetailScreen({
                   <View key={entry.id} style={styles.timelineItem}>
                     <Text style={styles.rowTitle}>{entry.executionKind}</Text>
                     <Text style={styles.rowCaption}>
-                      {entry.errorMessage ?? `Agendado para ${formatDateTime(entry.scheduledFor)}`}
+                      {entry.errorMessage ??
+                        t('clientDetail.inbox.automationScheduledFor', {
+                          value: formatDateTime(entry.scheduledFor),
+                        })}
                     </Text>
                   </View>
                 ))}
@@ -1342,8 +1382,11 @@ function ClientDetailScreen({
                       {entry.triggerSource} • {entry.status}
                     </Text>
                     <Text style={styles.rowCaption}>
-                      {entry.processedCount} processada(s), {entry.skippedCount} pulada(s),{' '}
-                      {entry.failedCount} falha(s)
+                      {t('clientDetail.inbox.schedulerSummary', {
+                        processed: String(entry.processedCount),
+                        skipped: String(entry.skippedCount),
+                        failed: String(entry.failedCount),
+                      })}
                     </Text>
                   </View>
                 ))}
@@ -1351,27 +1394,27 @@ function ClientDetailScreen({
             </View>
           </SectionCard>
 
-          <SectionCard title="Eventos" description="Criação básica de evento com persistência real.">
+          <SectionCard title={t('clientDetail.events.title')} description={t('clientDetail.events.description')}>
             <View style={styles.cardBody}>
               <MobileField
-                label="Título"
+                label={t('common.title')}
                 value={eventForm.title}
                 onChangeText={(value) => setEventForm((current) => ({ ...current, title: value }))}
               />
               <MobileField
-                label="Tipo de evento"
+                label={t('clientDetail.eventType')}
                 value={eventForm.eventType}
                 onChangeText={(value) =>
                   setEventForm((current) => ({ ...current, eventType: value }))
                 }
               />
               <MobileField
-                label="Local"
+                label={t('clients.location')}
                 value={eventForm.location ?? ''}
                 onChangeText={(value) => setEventForm((current) => ({ ...current, location: value }))}
               />
               <DateTimeField
-                label="Data e hora do evento"
+                label={t('clientDetail.eventDate')}
                 value={eventForm.eventDate}
                 onChange={(nextValue) =>
                   setEventForm((current) => ({
@@ -1381,13 +1424,13 @@ function ClientDetailScreen({
                 }
               />
               <ChoiceField
-                label="Status"
+                label={t('common.status')}
                 value={eventForm.status}
                 options={eventStatusOptions}
                 onChange={(value) => setEventForm((current) => ({ ...current, status: value }))}
               />
               <MobileField
-                label="Convidadas"
+                label={t('clientDetail.guestCount')}
                 value={eventForm.guestCount ? String(eventForm.guestCount) : ''}
                 onChangeText={(value) =>
                   setEventForm((current) => ({
@@ -1398,13 +1441,13 @@ function ClientDetailScreen({
                 keyboardType="numeric"
               />
               <MobileField
-                label="Observações"
+                label={t('clients.notes')}
                 value={eventForm.notes ?? ''}
                 onChangeText={(value) => setEventForm((current) => ({ ...current, notes: value }))}
                 multiline
               />
               <ActionButton
-                label={busyAction === 'create-event' ? 'Salvando...' : 'Criar evento'}
+                label={busyAction === 'create-event' ? t('common.processing') : t('clientDetail.events.create')}
                 onPress={() =>
                   void runAction(
                     'create-event',
@@ -1418,7 +1461,7 @@ function ClientDetailScreen({
                       );
                       setEventForm(createEventDraft());
                     },
-                    'Evento criado com sucesso.',
+                    t('clientDetail.eventCreated'),
                   )
                 }
               />
@@ -1428,33 +1471,33 @@ function ClientDetailScreen({
                     <View style={styles.rowText}>
                       <Text style={styles.rowTitle}>{eventItem.title}</Text>
                       <Text style={styles.rowSubtitle}>{formatDateTime(eventItem.eventDate)}</Text>
-                      <Text style={styles.rowCaption}>{eventItem.location ?? 'Sem local informado'}</Text>
+                      <Text style={styles.rowCaption}>{eventItem.location ?? t('common.notInformed')}</Text>
                     </View>
                     <Pill tone={eventItem.status === 'booked' ? 'success' : 'accent'}>
-                      {eventItem.status}
+                      {eventStatusLabel(eventItem.status)}
                     </Pill>
                   </View>
                 ))
               ) : (
                 <EmptyCard
-                  title="Nenhum evento criado"
-                  description="Crie o primeiro evento para liberar orçamento, agenda e contratos."
+                  title={t('clientDetail.noEventsTitle')}
+                  description={t('clientDetail.noEventsDescription')}
                 />
               )}
             </View>
           </SectionCard>
 
-          <SectionCard title="Agenda" description="Agendamento básico com vínculo opcional ao evento.">
+          <SectionCard title={t('clientDetail.appointmentsTitle')} description={t('clientDetail.appointmentsDescription')}>
             <View style={styles.cardBody}>
               <MobileField
-                label="Título"
+                label={t('common.title')}
                 value={appointmentForm.title}
                 onChangeText={(value) =>
                   setAppointmentForm((current) => ({ ...current, title: value }))
                 }
               />
               <ChoiceField
-                label="Tipo"
+                label={t('common.type')}
                 value={appointmentForm.appointmentType}
                 options={appointmentTypeOptions}
                 onChange={(value) =>
@@ -1462,7 +1505,7 @@ function ClientDetailScreen({
                 }
               />
               <ChoiceField
-                label="Status"
+                label={t('common.status')}
                 value={appointmentForm.status}
                 options={appointmentStatusOptions}
                 onChange={(value) =>
@@ -1470,10 +1513,10 @@ function ClientDetailScreen({
                 }
               />
               <ChoiceField
-                label="Vincular ao evento"
+                label={t('clientDetail.relatedEvent')}
                 value={appointmentForm.eventId ?? ''}
                 options={[
-                  { label: 'Sem vínculo', value: '' },
+                  { label: t('common.noSpecificEvent'), value: '' },
                   ...eventOptions.map((eventOption) => ({
                     label: eventOption.label,
                     value: eventOption.id,
@@ -1487,7 +1530,7 @@ function ClientDetailScreen({
                 }
               />
               <DateTimeField
-                label="Início"
+                label={t('common.start')}
                 value={appointmentForm.startsAt}
                 onChange={(nextValue) =>
                   setAppointmentForm((current) => ({
@@ -1497,7 +1540,7 @@ function ClientDetailScreen({
                 }
               />
               <DateTimeField
-                label="Fim"
+                label={t('common.end')}
                 value={appointmentForm.endsAt}
                 onChange={(nextValue) =>
                   setAppointmentForm((current) => ({
@@ -1507,14 +1550,14 @@ function ClientDetailScreen({
                 }
               />
               <MobileField
-                label="Local"
+                label={t('clients.location')}
                 value={appointmentForm.location ?? ''}
                 onChangeText={(value) =>
                   setAppointmentForm((current) => ({ ...current, location: value }))
                 }
               />
               <MobileField
-                label="Observações"
+                label={t('clients.notes')}
                 value={appointmentForm.notes ?? ''}
                 onChangeText={(value) =>
                   setAppointmentForm((current) => ({ ...current, notes: value }))
@@ -1522,7 +1565,7 @@ function ClientDetailScreen({
                 multiline
               />
               <ActionButton
-                label={busyAction === 'create-appointment' ? 'Salvando...' : 'Criar agendamento'}
+                label={busyAction === 'create-appointment' ? t('common.processing') : t('clientDetail.agenda.create')}
                 onPress={() =>
                   void runAction(
                     'create-appointment',
@@ -1537,7 +1580,7 @@ function ClientDetailScreen({
                       );
                       setAppointmentForm(createAppointmentDraft());
                     },
-                    'Agendamento criado com sucesso.',
+                    t('clientDetail.appointmentCreated'),
                   )
                 }
               />
@@ -1547,26 +1590,26 @@ function ClientDetailScreen({
                     <View style={styles.rowText}>
                       <Text style={styles.rowTitle}>{appointment.title}</Text>
                       <Text style={styles.rowSubtitle}>{formatDateTime(appointment.startsAt)}</Text>
-                      <Text style={styles.rowCaption}>{appointment.location ?? 'Sem local informado'}</Text>
+                      <Text style={styles.rowCaption}>{appointment.location ?? t('common.notInformed')}</Text>
                     </View>
                     <Pill tone={appointment.status === 'confirmed' ? 'success' : 'accent'}>
-                      {appointment.status}
+                      {appointmentStatusLabel(appointment.status)}
                     </Pill>
                   </View>
                 ))
               ) : (
                 <EmptyCard
-                  title="Nenhum agendamento"
-                  description="Crie compromissos para organizar o dia da cliente e o próximo passo do atendimento."
+                  title={t('clientDetail.noAppointmentsTitle')}
+                  description={t('clientDetail.noAppointmentsDescription')}
                 />
               )}
             </View>
           </SectionCard>
 
-          <SectionCard title="Orçamentos" description="Criação básica de proposta com itens reais.">
+          <SectionCard title={t('clientDetail.budgetsTitle')} description={t('clientDetail.budgetsDescription')}>
             <View style={styles.cardBody}>
               <ChoiceField
-                label="Evento"
+                label={t('common.event')}
                 value={budgetForm.eventId}
                 options={eventOptions.map((eventOption) => ({
                   label: eventOption.label,
@@ -1575,13 +1618,13 @@ function ClientDetailScreen({
                 onChange={(value) => setBudgetForm((current) => ({ ...current, eventId: value }))}
               />
               <ChoiceField
-                label="Status"
+                label={t('common.status')}
                 value={budgetForm.status}
                 options={budgetStatusOptions}
                 onChange={(value) => setBudgetForm((current) => ({ ...current, status: value }))}
               />
               <DateTimeField
-                label="Validade"
+                label={t('common.validUntil')}
                 value={budgetForm.validUntil || undefined}
                 onChange={(nextValue) =>
                   setBudgetForm((current) => ({
@@ -1591,7 +1634,7 @@ function ClientDetailScreen({
                 }
               />
               <MobileField
-                label="Desconto"
+                label={t('common.discount')}
                 value={String(budgetForm.discountAmount)}
                 onChangeText={(value) =>
                   setBudgetForm((current) => ({
@@ -1604,7 +1647,7 @@ function ClientDetailScreen({
               {budgetForm.items.map((item, index) => (
                 <View key={`${item.description}-${index}`} style={styles.inlineCard}>
                   <MobileField
-                    label={`Item ${index + 1}`}
+                    label={`${t('common.description')} ${index + 1}`}
                     value={item.description}
                     onChangeText={(value) =>
                       setBudgetForm((current) => ({
@@ -1621,7 +1664,7 @@ function ClientDetailScreen({
                     }
                   />
                   <MobileField
-                    label="Quantidade"
+                    label={t('common.quantity')}
                     value={String(item.quantity)}
                     onChangeText={(value) =>
                       setBudgetForm((current) => ({
@@ -1639,7 +1682,7 @@ function ClientDetailScreen({
                     keyboardType="numeric"
                   />
                   <MobileField
-                    label="Preço unitário"
+                    label={t('common.unitPrice')}
                     value={String(item.unitPrice)}
                     onChangeText={(value) =>
                       setBudgetForm((current) => ({
@@ -1659,7 +1702,7 @@ function ClientDetailScreen({
                 </View>
               ))}
               <ActionButton
-                label="Adicionar item"
+                label={t('common.addItem')}
                 onPress={() =>
                   setBudgetForm((current) => ({
                     ...current,
@@ -1669,7 +1712,7 @@ function ClientDetailScreen({
                 variant="secondary"
               />
               <ActionButton
-                label={busyAction === 'create-budget' ? 'Salvando...' : 'Criar orçamento'}
+                label={busyAction === 'create-budget' ? t('common.processing') : t('clientDetail.budgets.create')}
                 onPress={() =>
                   void runAction(
                     'create-budget',
@@ -1684,7 +1727,7 @@ function ClientDetailScreen({
                       );
                       setBudgetForm(createBudgetDraft(data.events[0]?.id));
                     },
-                    'Orçamento criado com sucesso.',
+                    t('clientDetail.budgetCreated'),
                   )
                 }
               />
@@ -1694,30 +1737,30 @@ function ClientDetailScreen({
                     <View style={styles.rowText}>
                       <Text style={styles.rowTitle}>{formatCurrency(budget.totalAmount)}</Text>
                       <Text style={styles.rowSubtitle}>
-                        {budget.items.length} item(ns) • {budget.status}
+                        {budget.items.length} item(ns) • {budgetStatusLabel(budget.status)}
                       </Text>
                       <Text style={styles.rowCaption}>
-                        Validade {budget.validUntil ? formatDate(budget.validUntil) : 'aberta'}
+                        {t('common.validUntil')} {budget.validUntil ? formatDate(budget.validUntil) : t('common.all')}
                       </Text>
                     </View>
                     <Pill tone={budget.status === 'approved' ? 'success' : 'warning'}>
-                      {budget.status}
+                      {budgetStatusLabel(budget.status)}
                     </Pill>
                   </View>
                 ))
               ) : (
                 <EmptyCard
-                  title="Nenhum orçamento"
-                  description="Crie a primeira proposta para acompanhar negociação e valor."
+                  title={t('clientDetail.noBudgetsTitle')}
+                  description={t('clientDetail.noBudgetsDescription')}
                 />
               )}
             </View>
           </SectionCard>
 
-          <SectionCard title="Contratos" description="Criação de contrato, nova versão e abertura segura do PDF.">
+          <SectionCard title={t('clientDetail.contractsTitle')} description={t('clientDetail.contractsDescription')}>
             <View style={styles.cardBody}>
               <ChoiceField
-                label="Evento"
+                label={t('common.event')}
                 value={contractForm.eventId}
                 options={eventOptions.map((eventOption) => ({
                   label: eventOption.label,
@@ -1726,13 +1769,13 @@ function ClientDetailScreen({
                 onChange={(value) => setContractForm((current) => ({ ...current, eventId: value }))}
               />
               <ChoiceField
-                label="Status inicial"
+                label={t('common.initialStatus')}
                 value={contractForm.status}
                 options={contractStatusOptions}
                 onChange={(value) => setContractForm((current) => ({ ...current, status: value }))}
               />
               <DateTimeField
-                label="Assinado em"
+                label={t('common.signedAt')}
                 value={contractForm.signedAt || undefined}
                 onChange={(nextValue) =>
                   setContractForm((current) => ({
@@ -1742,7 +1785,7 @@ function ClientDetailScreen({
                 }
               />
               <ActionButton
-                label={contractFile ? `PDF: ${contractFile.fileName}` : 'Selecionar PDF do contrato'}
+                label={contractFile ? `PDF: ${contractFile.fileName}` : t('clientDetail.selectContractPdf')}
                 onPress={() =>
                   void (async () => {
                     const file = await pickSingleFile(['application/pdf', '.pdf']);
@@ -1760,13 +1803,13 @@ function ClientDetailScreen({
                 />
               ) : null}
               <ActionButton
-                label={busyAction === 'create-contract' ? 'Enviando...' : 'Criar contrato'}
+                label={busyAction === 'create-contract' ? t('common.processing') : t('clientDetail.contracts.create')}
                 onPress={() =>
                   void runAction(
                     'create-contract',
                     async () => {
                       if (!contractFile) {
-                        throw new Error('Selecione um PDF de contrato antes de salvar.');
+                        throw new Error(t('clientDetail.contracts.selectPdf'));
                       }
 
                       await createContract(
@@ -1781,17 +1824,17 @@ function ClientDetailScreen({
                       setContractFile(null);
                       setContractForm(createContractDraft(data.events[0]?.id));
                     },
-                    'Contrato criado com sucesso.',
+                    t('clientDetail.contractCreated'),
                   )
                 }
               />
               {data.contracts.length ? (
                 data.contracts.map((contract) => (
                   <View key={contract.id} style={styles.inlineCard}>
-                    <Text style={styles.rowTitle}>{contract.version?.fileName ?? 'Contrato sem PDF'}</Text>
+                    <Text style={styles.rowTitle}>{contract.version?.fileName ?? t('clientDetail.noContractPdf')}</Text>
                     <Text style={styles.rowCaption}>
                       {contract.versions.length} vers{contract.versions.length === 1 ? 'ão' : 'ões'} •{' '}
-                      {contract.signedAt ? `assinado em ${formatDate(contract.signedAt)}` : 'aguardando ação'}
+                      {contract.signedAt ? `${t('common.signedAt')} ${formatDate(contract.signedAt)}` : t('clientDetail.waitingManualAction')}
                     </Text>
                     <View style={styles.choiceRow}>
                       {contractStatusOptions.map((option) => (
@@ -1811,7 +1854,7 @@ function ClientDetailScreen({
                                     option.value === 'signed' ? new Date().toISOString() : undefined,
                                 });
                               },
-                              'Status do contrato atualizado.',
+                              t('clientDetail.contractStatusUpdated'),
                             )
                           }
                         >
@@ -1828,23 +1871,23 @@ function ClientDetailScreen({
                     </View>
                     <View style={styles.actionRow}>
                       <ActionButton
-                        label="Abrir PDF"
+                        label={t('common.openPdf')}
                         onPress={() => {
                           if (!contract.version?.storagePath) {
-                            setActionError('Este contrato ainda não possui PDF disponível.');
+                            setActionError(t('clientDetail.contracts.missingPdf'));
                             return;
                           }
 
                           void openFile(
                             'contracts',
                             contract.version.storagePath,
-                            'Contrato aberto no dispositivo.',
+                            t('clientDetail.contracts.openPdf'),
                           );
                         }}
                         variant="secondary"
                       />
                       <ActionButton
-                        label="Nova versão"
+                        label={t('common.newVersion')}
                         onPress={() =>
                           void (async () => {
                             const file = await pickSingleFile(['application/pdf', '.pdf']);
@@ -1857,7 +1900,7 @@ function ClientDetailScreen({
                               async () => {
                                 await uploadContractVersion(mobileSupabaseClient!, contract.id, file);
                               },
-                              'Nova versão do contrato enviada.',
+                              t('clientDetail.contractVersionUploaded'),
                             );
                           })()
                         }
@@ -1868,20 +1911,20 @@ function ClientDetailScreen({
                 ))
               ) : (
                 <EmptyCard
-                  title="Nenhum contrato"
-                  description="Selecione um PDF e crie o primeiro contrato deste atendimento."
+                  title={t('clientDetail.noContractsTitle')}
+                  description={t('clientDetail.noContractsDescription')}
                 />
               )}
             </View>
           </SectionCard>
 
-          <SectionCard title="Arquivos" description="Upload real de imagens e PDFs com preview básico do arquivo selecionado.">
+          <SectionCard title={t('clientDetail.assetsTitle')} description={t('clientDetail.assetsDescription')}>
             <View style={styles.cardBody}>
               <ChoiceField
-                label="Vincular ao evento"
+                label={t('common.linkEvent')}
                 value={assetEventId ?? ''}
                 options={[
-                  { label: 'Sem vínculo', value: '' },
+                  { label: t('common.noSpecificEvent'), value: '' },
                   ...eventOptions.map((eventOption) => ({
                     label: eventOption.label,
                     value: eventOption.id,
@@ -1890,12 +1933,12 @@ function ClientDetailScreen({
                 onChange={(value) => setAssetEventId(value || undefined)}
               />
               <MobileField
-                label="Legenda"
+                label={t('common.caption')}
                 value={assetCaption}
                 onChangeText={setAssetCaption}
               />
               <ActionButton
-                label={assetFile ? `Arquivo: ${assetFile.fileName}` : 'Selecionar imagem ou PDF'}
+                label={assetFile ? `${t('common.file')}: ${assetFile.fileName}` : t('clientDetail.selectAsset')}
                 onPress={() =>
                   void (async () => {
                     const file = await pickSingleFile(['image/*', 'application/pdf', '.pdf']);
@@ -1918,13 +1961,13 @@ function ClientDetailScreen({
                 </View>
               ) : null}
               <ActionButton
-                label={busyAction === 'upload-asset' ? 'Enviando...' : 'Enviar arquivo'}
+                label={busyAction === 'upload-asset' ? t('common.processing') : t('clientDetail.sendFile')}
                 onPress={() =>
                   void runAction(
                     'upload-asset',
                     async () => {
                       if (!assetFile) {
-                        throw new Error('Selecione um arquivo antes de enviar.');
+                        throw new Error(t('clientDetail.assets.selectFile'));
                       }
 
                       await uploadClientAsset(
@@ -1940,7 +1983,7 @@ function ClientDetailScreen({
                       setAssetEventId(undefined);
                       setAssetFile(null);
                     },
-                    'Arquivo enviado com sucesso.',
+                    t('clientDetail.assetUploaded'),
                   )
                 }
               />
@@ -1949,12 +1992,12 @@ function ClientDetailScreen({
                   <RemoteMediaCard
                     key={media.id}
                     title={media.fileName}
-                    subtitle={`${media.caption ?? 'Sem legenda'} • ${formatFileSize(media.sizeBytes)}`}
+                    subtitle={`${media.caption ?? t('clientDetail.assets.noCaption')} • ${formatFileSize(media.sizeBytes)}`}
                     bucket="client-media"
                     path={media.storagePath}
                     isImage
                     onOpen={() =>
-                      openFile('client-media', media.storagePath, 'Imagem aberta no dispositivo.')
+                      openFile('client-media', media.storagePath, t('clientDetail.fileOpened'))
                     }
                   />
                 ))
@@ -1972,15 +2015,15 @@ function ClientDetailScreen({
                       openFile(
                         resolveDocumentBucket(document),
                         document.storagePath,
-                        'Arquivo aberto no dispositivo.',
+                        t('clientDetail.fileOpened'),
                       )
                     }
                   />
                 ))}
               {!data.media.length && !data.documents.filter((document) => document.documentType !== 'contract').length ? (
                 <EmptyCard
-                  title="Nenhum arquivo anexado"
-                  description="Envie imagens de referência ou PDFs para manter tudo no perfil da cliente."
+                  title={t('clientDetail.noFilesTitle')}
+                  description={t('clientDetail.noFilesDescription')}
                 />
               ) : null}
             </View>
@@ -1998,6 +2041,7 @@ function AgendaScreen({
   activeTab: TabKey;
   onChangeTab: (tab: TabKey) => void;
 }) {
+  const { t, formatDateTime, appointmentStatusLabel } = useI18n();
   const [period, setPeriod] = useState<'today' | 'next7' | 'all'>('today');
   const [status, setStatus] = useState<
     'all' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
@@ -2028,29 +2072,45 @@ function AgendaScreen({
     to: range.to,
     orderDirection: 'asc',
   });
+  const localizedAgendaFilterOptions = useMemo(
+    () => [
+      { label: t('agenda.period.today'), value: 'today' as const },
+      { label: t('agenda.period.next7'), value: 'next7' as const },
+      { label: t('agenda.period.all'), value: 'all' as const },
+    ],
+    [t],
+  );
+  const localizedAppointmentStatusOptions = useMemo(
+    () => [
+      { label: t('common.all'), value: 'all' as const },
+      { label: appointmentStatusLabel('scheduled'), value: 'scheduled' as const },
+      { label: appointmentStatusLabel('confirmed'), value: 'confirmed' as const },
+      { label: appointmentStatusLabel('completed'), value: 'completed' as const },
+      { label: appointmentStatusLabel('cancelled'), value: 'cancelled' as const },
+      { label: appointmentStatusLabel('no_show'), value: 'no_show' as const },
+    ],
+    [appointmentStatusLabel, t],
+  );
 
   return (
     <ScreenShell
-      title="Agenda do dia"
+      title={t('agenda.title')}
       subtitle="Compromissos reais com filtro mínimo por período e status."
       footer={<BottomNav activeTab={activeTab} onChange={(tab) => onChangeTab(tab as TabKey)} />}
     >
       <SectionCard title="Filtros" description="Visão rápida para hoje, 7 dias ou tudo.">
-        <ChoiceField label="Período" value={period} options={agendaFilterOptions} onChange={setPeriod} />
+        <ChoiceField label={t('agenda.period')} value={period} options={localizedAgendaFilterOptions} onChange={setPeriod} />
         <ChoiceField
-          label="Status"
+          label={t('agenda.status')}
           value={status}
-          options={[
-            { label: 'Todos', value: 'all' },
-            ...appointmentStatusOptions,
-          ]}
+          options={localizedAppointmentStatusOptions}
           onChange={(value) => setStatus(value)}
         />
       </SectionCard>
 
       {error ? <FeedbackCard tone="error" message={error} /> : null}
 
-      <SectionCard title="Compromissos" description="Hoje e próximos passos relevantes.">
+      <SectionCard title={t('dashboard.nextAppointments')} description={t('agenda.cardDescription')}>
         {loading ? (
           <Text style={styles.helperText}>Carregando agenda...</Text>
         ) : data?.length ? (
@@ -2059,17 +2119,17 @@ function AgendaScreen({
               <View style={styles.rowText}>
                 <Text style={styles.rowTitle}>{appointment.title}</Text>
                 <Text style={styles.rowSubtitle}>{formatDateTime(appointment.startsAt)}</Text>
-                <Text style={styles.rowCaption}>{appointment.location ?? 'Sem local'}</Text>
+                <Text style={styles.rowCaption}>{appointment.location ?? t('common.noLocation')}</Text>
               </View>
               <Pill tone={appointment.status === 'confirmed' ? 'success' : 'accent'}>
-                {appointment.status}
+                {appointmentStatusLabel(appointment.status)}
               </Pill>
             </View>
           ))
         ) : (
           <EmptyCard
-            title="Agenda vazia"
-            description="Nenhum compromisso corresponde aos filtros selecionados."
+            title={t('agenda.emptyTitle')}
+            description={t('agenda.emptyDescription')}
           />
         )}
       </SectionCard>
@@ -2088,11 +2148,12 @@ function NotificationsScreen({
   onSignOut: () => Promise<void>;
   professional: Professional;
 }) {
+  const { t } = useI18n();
   const { data } = useDashboardSummary(mobileSupabaseClient);
 
   return (
     <ScreenShell
-      title="Notificações internas"
+      title={t('mobile.notificationsTitle')}
       subtitle={`Sessão ativa como ${professional.fullName}.`}
       footer={<BottomNav activeTab={activeTab} onChange={(tab) => onChangeTab(tab as TabKey)} />}
     >
@@ -2110,7 +2171,7 @@ function NotificationsScreen({
               'Nenhuma cliente crítica agora.'}
           </Text>
         </View>
-        <ActionButton label="Sair da conta" onPress={() => void onSignOut()} variant="secondary" />
+        <ActionButton label={t('workspace.signOut')} onPress={() => void onSignOut()} variant="secondary" />
       </SectionCard>
     </ScreenShell>
   );

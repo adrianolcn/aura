@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Cormorant_Garamond, Manrope } from 'next/font/google';
 
 import { AuthProvider } from '@/components/auth-provider';
+import { WebI18nProvider } from '@/components/i18n-provider';
 import { ObservabilityProvider } from '@/components/observability-provider';
 
 import './globals.css';
@@ -29,10 +30,12 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${manrope.variable} ${cormorant.variable}`}>
         <ObservabilityProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <WebI18nProvider>{children}</WebI18nProvider>
+          </AuthProvider>
         </ObservabilityProvider>
       </body>
     </html>

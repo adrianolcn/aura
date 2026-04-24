@@ -24,6 +24,22 @@ exports.testGroup = {
             },
         },
         {
+            name: 'defaults professional locale to pt-BR',
+            run: () => {
+                const parsed = index_1.professionalSchema.parse({
+                    id: '30f21e3f-e367-42cf-95a2-f325255eb4eb',
+                    authUserId: '7701c746-24b7-4121-a3cc-686e3631f3d6',
+                    fullName: 'Ana Costa',
+                    businessName: 'Studio Ana',
+                    phone: '71999990000',
+                    whatsappPhone: '71999990000',
+                    email: 'ana@example.com',
+                    createdAt: '2026-04-24T12:00:00.000Z',
+                });
+                strict_1.default.equal(parsed.locale, 'pt-BR');
+            },
+        },
+        {
             name: 'rejects appointments when end is before start',
             run: () => {
                 strict_1.default.throws(() => index_1.appointmentInputSchema.parse({

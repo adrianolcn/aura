@@ -2,6 +2,7 @@ export * from './auth';
 export * from './communications';
 export * from './errors';
 export * from './formatters';
+export * from './i18n';
 export * from './mock';
 export * from './observability';
 export * from './services';

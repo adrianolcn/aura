@@ -8,6 +8,7 @@ const auth_routing_test_js_1 = require("../apps/web/src/lib/auth-routing.test.js
 const communications_integration_test_js_1 = require("../packages/core/src/communications.integration.test.js");
 const edge_functions_integration_test_js_1 = require("../packages/core/src/edge-functions.integration.test.js");
 const errors_test_js_1 = require("../packages/core/src/errors.test.js");
+const i18n_test_js_1 = require("../packages/core/src/i18n.test.js");
 const services_test_js_1 = require("../packages/core/src/services.test.js");
 const uploads_test_js_1 = require("../packages/core/src/uploads.test.js");
 const whatsapp_test_js_1 = require("../packages/core/src/whatsapp.test.js");
@@ -17,6 +18,7 @@ const groups = [
     communications_integration_test_js_1.testGroup,
     edge_functions_integration_test_js_1.testGroup,
     errors_test_js_1.testGroup,
+    i18n_test_js_1.testGroup,
     services_test_js_1.testGroup,
     uploads_test_js_1.testGroup,
     whatsapp_test_js_1.testGroup,

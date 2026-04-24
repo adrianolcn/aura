@@ -23,15 +23,28 @@ Validar a integração real da AURA com Meta/WhatsApp em ambiente de staging ant
 ## Passos
 
 1. confirmar templates aprovados na Meta
-2. preencher envs de staging no GitHub e no Supabase
+2. preencher envs de staging no GitHub, no web e nas Edge Functions
 3. publicar Edge Functions
 4. apontar webhook da Meta para `whatsapp-webhook`
 5. validar `hub.challenge`
 6. enviar um template real da AURA
 7. responder do WhatsApp para gerar inbound real
 8. confirmar status `sent/delivered/read` quando disponível
-9. rodar `staging-validation.yml`
-10. rodar o checklist de piloto
+9. validar a inbox web
+10. validar a inbox mobile em simulador/dispositivo
+11. rodar `staging-validation.yml`
+12. rodar o checklist de piloto
+13. registrar resultado em `validation-evidence.md` e `go-live-evidence.md`
+
+## Critério de sucesso operacional
+
+- webhook verificado pela Meta
+- template real enviado pela AURA
+- inbound real persistido e associado à cliente correta
+- status outbound registrado
+- logs em observabilidade externa
+- scheduler gerando `automation_dispatch_runs`
+- E2E sem skip indevido
 
 ## Evidências esperadas
 

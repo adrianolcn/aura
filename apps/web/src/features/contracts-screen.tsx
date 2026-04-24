@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { createSignedStorageUrl, formatDate, toUserMessage, useContracts } from '@aura/core';
+import { createSignedStorageUrl, toUserMessage, useContracts, useI18n } from '@aura/core';
 import { Badge, PageHeader, SectionCard } from '@aura/ui';
 
 import { useAuth } from '@/components/auth-provider';
@@ -10,6 +10,7 @@ import { ErrorBlock, LoadingBlock } from '@/components/resource-state';
 
 export function ContractsScreen() {
   const auth = useAuth();
+  const { t, formatDate, contractStatusLabel } = useI18n();
   const [status, setStatus] = useState<'all' | 'draft' | 'uploaded' | 'sent' | 'signed' | 'cancelled'>('all');
   const [orderBy, setOrderBy] = useState<'createdAt' | 'updatedAt' | 'signedAt'>('createdAt');
   const [actionError, setActionError] = useState<string | null>(null);
@@ -21,28 +22,28 @@ export function ContractsScreen() {
   });
 
   if (auth.loading || loading) {
-    return <LoadingBlock title="Contratos e documentos" />;
+    return <LoadingBlock title={t('nav.contracts')} />;
   }
 
   if (error || !data) {
-    return <ErrorBlock message={error ?? 'Sem contratos disponíveis.'} />;
+    return <ErrorBlock message={error ?? t('contracts.emptyDescription')} />;
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Contratos"
-        title="Documentos e status"
-        description="Fluxo simples e sólido para o MVP: upload manual de PDF, versionamento e acompanhamento de status."
+        eyebrow={t('contracts.eyebrow')}
+        title={t('contracts.title')}
+        description={t('contracts.description')}
       />
 
       <SectionCard
-        title="Contratos vinculados a eventos"
-        description="A mesma estrutura já suporta evolução para assinatura digital e automações futuras."
+        title={t('contracts.listTitle')}
+        description={t('contracts.listDescription')}
       >
         <div className="mb-4 grid gap-3 md:grid-cols-2">
           <label className="space-y-2 text-sm text-stone-600">
-            <span>Status</span>
+            <span>{t('agenda.status')}</span>
             <select
               value={status}
               onChange={(event) =>
@@ -58,16 +59,16 @@ export function ContractsScreen() {
               }
               className="w-full rounded-2xl border border-stone-200 px-4 py-3 outline-none transition focus:border-stone-950"
             >
-              <option value="all">Todos</option>
+              <option value="all">{t('common.all')}</option>
               {['draft', 'uploaded', 'sent', 'signed', 'cancelled'].map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {contractStatusLabel(item as 'draft' | 'uploaded' | 'sent' | 'signed' | 'cancelled')}
                 </option>
               ))}
             </select>
           </label>
           <label className="space-y-2 text-sm text-stone-600">
-            <span>Ordenar por</span>
+            <span>{t('clients.orderBy')}</span>
             <select
               value={orderBy}
               onChange={(event) =>
@@ -75,9 +76,9 @@ export function ContractsScreen() {
               }
               className="w-full rounded-2xl border border-stone-200 px-4 py-3 outline-none transition focus:border-stone-950"
             >
-              <option value="createdAt">Cadastro recente</option>
-              <option value="updatedAt">Atualização recente</option>
-              <option value="signedAt">Data de assinatura</option>
+              <option value="createdAt">{t('clients.order.createdAt')}</option>
+              <option value="updatedAt">{t('clients.order.updatedAt')}</option>
+              <option value="signedAt">{t('contracts.order.signedAt')}</option>
             </select>
           </label>
         </div>
@@ -90,7 +91,7 @@ export function ContractsScreen() {
 
         {!data.length ? (
           <div className="rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-6 text-sm text-stone-600">
-            Nenhum contrato corresponde aos filtros selecionados.
+            {t('contracts.emptyDescription')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -101,13 +102,20 @@ export function ContractsScreen() {
             >
               <div>
                 <p className="font-semibold text-stone-950">
-                  {contract.version?.fileName ?? 'Versão pendente'}
+                  {contract.version?.fileName ?? t('contracts.pendingVersion')}
                 </p>
                 <p className="mt-1 text-sm text-stone-600">
-                  Upload em {contract.version ? formatDate(contract.version.uploadedAt) : 'aguardando'}
+                  {t('contracts.uploadedAt', {
+                    date: contract.version ? formatDate(contract.version.uploadedAt) : t('contracts.awaitingUpload'),
+                  })}
                 </p>
                 <p className="mt-1 text-xs text-stone-500">
-                  {contract.versions.length} vers{contract.versions.length === 1 ? 'ão' : 'ões'} registrada(s)
+                  {t(
+                    contract.versions.length === 1
+                      ? 'contracts.versionCount.one'
+                      : 'contracts.versionCount.other',
+                    { count: contract.versions.length },
+                  )}
                 </p>
                 {contract.version ? (
                   <button
@@ -137,12 +145,12 @@ export function ContractsScreen() {
                       }
                     }}
                   >
-                    {openingId === contract.id ? 'Abrindo PDF...' : 'Abrir / baixar PDF'}
+                    {openingId === contract.id ? t('contracts.openingPdf') : t('contracts.openPdf')}
                   </button>
                 ) : null}
               </div>
               <Badge tone={contract.status === 'signed' ? 'success' : 'warning'}>
-                {contract.status}
+                {contractStatusLabel(contract.status)}
               </Badge>
             </div>
           ))}

@@ -8,6 +8,7 @@
 - mensagem inbound não associa cliente
 - scheduler executa com falhas
 - observabilidade externa não recebe eventos
+- polling da inbox não reflete histórico recente
 
 ## Primeira triagem
 
@@ -41,6 +42,17 @@ Scheduler:
 - validar `AUTOMATION_JOB_SECRET`
 - validar `AURA_AUTOMATION_DISPATCH_URL`
 - revisar `automation_dispatch_runs`
+
+Observabilidade:
+
+- validar DSN/configuração do provider
+- confirmar `APP_ENV` e `RELEASE_VERSION`
+- confirmar contexto de tenant, cliente e mensagem
+
+Inbox:
+
+- validar se o polling de 15s está ativo
+- conferir diferença entre histórico persistido e interface
 
 ## Fallback operacional
 

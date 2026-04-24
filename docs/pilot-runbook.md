@@ -23,10 +23,12 @@ No-Go:
 
 - confirmar secrets no GitHub
 - confirmar envs no Supabase
+- confirmar DSN/configuração de observabilidade externa
 - confirmar templates vinculados
 - confirmar número de staging configurado
 - confirmar `whatsapp_phone_number_id` no tenant
 - confirmar opt-in do grupo piloto
+- confirmar idioma padrão `pt-BR` e fallback funcionando
 
 ## Validação diária
 
@@ -35,6 +37,8 @@ No-Go:
 - checar erros no provedor externo de observabilidade
 - confirmar mensagens inbound do dia
 - confirmar automações críticas processadas
+- confirmar polling da inbox sem atraso operacional relevante
+- seguir [pilot-daily-ops.md](C:/dev/aura/docs/pilot-daily-ops.md)
 
 ## Rollback
 
@@ -42,6 +46,7 @@ No-Go:
 - remover webhook da Meta ou redirecionar para endpoint de fallback
 - desativar templates/automations problemáticos
 - comunicar operação assistida
+- voltar a operação manual por template quando necessário
 
 ## Reprocessamento controlado
 

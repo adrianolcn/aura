@@ -12,9 +12,13 @@ export function AppShell({
   children,
   navigation,
   sidebarFooter,
+  brandTitle = 'Beauty CRM',
+  brandDescription = 'Operação diária para maquiadoras e penteadistas com foco em relacionamento, agenda e contratos.',
 }: PropsWithChildren<{
   navigation: Array<{ href: string; label: string; active?: boolean }>;
   sidebarFooter?: ReactNode;
+  brandTitle?: string;
+  brandDescription?: string;
 }>) {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(249,115,22,0.18),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(8,145,178,0.16),_transparent_35%),linear-gradient(180deg,_#fffaf7_0%,_#fff_100%)] text-stone-900">
@@ -22,10 +26,9 @@ export function AppShell({
         <aside className="mb-4 rounded-[2rem] border border-white/70 bg-white/80 p-4 shadow-[0_24px_80px_rgba(148,74,24,0.08)] backdrop-blur md:mb-0 md:w-72 md:p-6">
           <div className="mb-8">
             <p className="text-xs uppercase tracking-[0.35em] text-orange-500">AURA</p>
-            <h1 className="mt-2 font-serif text-3xl text-stone-950">Beauty CRM</h1>
+            <h1 className="mt-2 font-serif text-3xl text-stone-950">{brandTitle}</h1>
             <p className="mt-3 text-sm leading-6 text-stone-600">
-              Operação diária para maquiadoras e penteadistas com foco em relacionamento,
-              agenda e contratos.
+              {brandDescription}
             </p>
           </div>
 

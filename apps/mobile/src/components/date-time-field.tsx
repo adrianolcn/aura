@@ -11,7 +11,7 @@ import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 
-import { formatDate, formatDateTime } from '@aura/core';
+import { useI18n } from '@aura/core';
 
 import { colors } from '@/theme';
 
@@ -40,6 +40,7 @@ export function DateTimeField({
   onChange: (value: string | undefined) => void;
   includeTime?: boolean;
 }) {
+  const { formatDate, formatDateTime } = useI18n();
   const [pickerMode, setPickerMode] = useState<PickerMode | null>(null);
   const currentValue = useMemo(() => (value ? new Date(value) : new Date()), [value]);
   const displayValue = value

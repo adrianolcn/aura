@@ -1,6 +1,6 @@
 'use client';
 
-import { formatCurrency, formatDateTime, useDashboardSummary } from '@aura/core';
+import { useDashboardSummary, useI18n } from '@aura/core';
 import { Badge, Button, PageHeader, SectionCard, StatCard } from '@aura/ui';
 
 import { useAuth } from '@/components/auth-provider';
@@ -8,27 +8,28 @@ import { ErrorBlock, LoadingBlock } from '@/components/resource-state';
 
 export function DashboardScreen() {
   const auth = useAuth();
+  const { t, formatCurrency, formatDateTime, appointmentStatusLabel } = useI18n();
   const { data, loading, error } = useDashboardSummary(auth.client);
 
   if (auth.loading || loading) {
-    return <LoadingBlock title="Dashboard do negócio" />;
+    return <LoadingBlock title={t('nav.dashboard')} />;
   }
 
   if (error || !data) {
-    return <ErrorBlock message={error ?? 'Sem dados para o dashboard.'} />;
+    return <ErrorBlock message={error ?? t('dashboard.pipelineHelper')} />;
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Operação"
-        title="AURA em movimento"
-        description="Visão rápida do pipeline comercial, agenda da semana e clientes com maior prioridade operacional."
+        eyebrow={t('dashboard.eyebrow')}
+        title={t('dashboard.title')}
+        description={t('dashboard.description')}
         actions={
           <>
-            <Button href="/clients">Novo cliente</Button>
+            <Button href="/clients">{t('dashboard.newClient')}</Button>
             <Button href="/agenda" tone="secondary">
-              Ver agenda
+              {t('dashboard.viewAgenda')}
             </Button>
           </>
         }
@@ -36,38 +37,40 @@ export function DashboardScreen() {
 
       {data?.professional ? (
         <div className="rounded-[1.75rem] border border-stone-200 bg-white/90 p-5 text-sm text-stone-600 shadow-[0_18px_45px_rgba(28,25,23,0.06)]">
-          Operando como <span className="font-semibold text-stone-950">{data.professional.businessName}</span> • tenant{' '}
-          <span className="font-mono text-xs">{data.professional.id}</span>
+          {t('dashboard.actingAs', {
+            businessName: data.professional.businessName,
+            tenantId: data.professional.id,
+          })}
         </div>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Clientes ativos"
+          label={t('dashboard.activeClients')}
           value={String(data.activeClients)}
-          helper="Base viva com histórico por cliente e eventos."
+          helper={t('dashboard.activeClientsHelper')}
         />
         <StatCard
-          label="Eventos fechados"
+          label={t('dashboard.bookedEvents')}
           value={String(data.bookedEvents)}
-          helper="Eventos já convertidos para operação."
+          helper={t('dashboard.bookedEventsHelper')}
         />
         <StatCard
-          label="Orçamentos pendentes"
+          label={t('dashboard.pendingBudgets')}
           value={String(data.pendingBudgets)}
-          helper="Propostas que ainda precisam de follow-up."
+          helper={t('dashboard.pendingBudgetsHelper')}
         />
         <StatCard
-          label="Pipeline"
+          label={t('dashboard.pipeline')}
           value={formatCurrency(data.revenuePipeline)}
-          helper="Receita potencial em negociação."
+          helper={t('dashboard.pipelineHelper')}
         />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr,0.8fr]">
         <SectionCard
-          title="Próximos compromissos"
-          description="Agenda crítica para o próximo ciclo operacional."
+          title={t('dashboard.nextAppointments')}
+          description={t('dashboard.nextAppointmentsDescription')}
         >
           <div className="space-y-3">
             {data.nextAppointments.map((appointment) => (
@@ -78,11 +81,11 @@ export function DashboardScreen() {
                 <div>
                   <p className="font-semibold text-stone-950">{appointment.title}</p>
                   <p className="mt-1 text-sm text-stone-600">
-                    {formatDateTime(appointment.startsAt)} • {appointment.location ?? 'Sem local'}
+                    {formatDateTime(appointment.startsAt)} • {appointment.location ?? t('common.noLocation')}
                   </p>
                 </div>
                 <Badge tone={appointment.status === 'confirmed' ? 'success' : 'info'}>
-                  {appointment.status}
+                  {appointmentStatusLabel(appointment.status)}
                 </Badge>
               </div>
             ))}
@@ -90,8 +93,8 @@ export function DashboardScreen() {
         </SectionCard>
 
         <SectionCard
-          title="Clientes quentes"
-          description="Quem merece resposta rápida, proposta refinada ou check-in manual."
+          title={t('dashboard.topClients')}
+          description={t('dashboard.topClientsDescription')}
         >
           <div className="space-y-3">
             {data.topClients.map((client) => (

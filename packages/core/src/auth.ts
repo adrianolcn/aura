@@ -7,10 +7,12 @@ import type {
   AuthSignInInput,
   AuthSignUpInput,
   Professional,
+  SupportedLocale,
 } from '@aura/types';
 import {
   authSignInSchema,
   authSignUpSchema,
+  supportedLocaleSchema,
 } from '@aura/types';
 
 import type {
@@ -40,6 +42,7 @@ function mapProfessional(row: Record<string, unknown>): Professional {
       ? String(row.whatsapp_business_account_id)
       : undefined,
     email: String(row.email),
+    locale: supportedLocaleSchema.parse(row.locale ?? 'pt-BR'),
     timezone: String(row.timezone ?? 'America/Sao_Paulo'),
     planTier: String(row.plan_tier ?? 'mvp'),
     createdAt: String(row.created_at),
@@ -137,4 +140,32 @@ export async function getCurrentProfessional(
   }
 
   return response.data ? mapProfessional(response.data as Record<string, unknown>) : null;
+}
+
+export async function updateProfessionalLocale(
+  client: AuraSupabaseClient,
+  locale: SupportedLocale,
+) {
+  const payload = supportedLocaleSchema.parse(locale);
+  const userResponse = await client.auth.getUser();
+
+  if (userResponse.error) {
+    throw new Error(userResponse.error.message);
+  }
+
+  const user = userResponse.data.user;
+  if (!user) {
+    throw new Error('Usuária autenticada não encontrada.');
+  }
+
+  const response = await client
+    .from('professionals')
+    .update({
+      locale: payload,
+    })
+    .eq('auth_user_id', user.id);
+
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
 }

@@ -1,0 +1,1070 @@
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type PropsWithChildren,
+} from 'react';
+
+import type {
+  AppointmentInput,
+  BudgetInput,
+  ClientEventInput,
+  ClientInput,
+  ContractInput,
+  Message,
+  SupportedLocale,
+} from '@aura/types';
+import { supportedLocaleSchema } from '@aura/types';
+
+import {
+  formatCurrency as baseFormatCurrency,
+  formatDate as baseFormatDate,
+  formatDateTime as baseFormatDateTime,
+} from './formatters';
+
+export const auraSupportedLocales = ['pt-BR', 'en-US'] as const satisfies SupportedLocale[];
+export const auraDefaultLocale: SupportedLocale = 'pt-BR';
+export const auraLocaleStorageKey = 'aura.locale';
+
+type TranslationParams = Record<string, string | number>;
+
+const localeLabels: Record<SupportedLocale, string> = {
+  'pt-BR': '🇧🇷 PT-BR',
+  'en-US': '🇺🇸 EN-US',
+};
+
+const dictionaries = {
+  'pt-BR': {
+    'common.appName': 'AURA',
+    'common.loading': 'Carregando...',
+    'common.processing': 'Processando...',
+    'common.save': 'Salvar',
+    'common.cancel': 'Cancelar',
+    'common.all': 'Todas',
+    'common.delete': 'Excluir',
+    'common.create': 'Criar',
+    'common.openFile': 'Abrir arquivo',
+    'common.openPdf': 'Abrir PDF',
+    'common.backToDashboard': 'Voltar ao dashboard',
+    'common.backToClients': 'Voltar para clientes',
+    'common.noEmail': 'Sem email',
+    'common.noLocation': 'Sem local',
+    'common.notInformed': 'Não informado',
+    'common.automaticSync': 'Sincronização automática a cada 15 segundos.',
+    'common.localeSelectorLabel': 'Idioma da interface',
+    'common.title': 'Título',
+    'common.type': 'Tipo',
+    'common.status': 'Status',
+    'common.start': 'Início',
+    'common.end': 'Fim',
+    'common.event': 'Evento',
+    'common.message': 'Mensagem',
+    'common.history': 'Histórico',
+    'common.files': 'Arquivos',
+    'common.filters': 'Filtros',
+    'common.retry': 'Reenviar',
+    'common.linkEvent': 'Vincular ao evento',
+    'common.caption': 'Legenda',
+    'common.file': 'Arquivo',
+    'common.validUntil': 'Validade',
+    'common.discount': 'Desconto',
+    'common.quantity': 'Quantidade',
+    'common.unitPrice': 'Preço unitário',
+    'common.initialStatus': 'Status inicial',
+    'common.signedAt': 'Assinado em',
+    'common.contractPdf': 'PDF do contrato',
+    'common.newVersion': 'Nova versão',
+    'common.addItem': 'Adicionar item',
+    'common.reply': 'Responder cliente',
+    'common.select': 'Selecione',
+    'common.currency': 'Moeda',
+    'common.description': 'Descrição',
+    'common.noSpecificEvent': 'Sem evento específico',
+    'nav.dashboard': 'Dashboard',
+    'nav.clients': 'Clientes',
+    'nav.agenda': 'Agenda',
+    'nav.budgets': 'Orçamentos',
+    'nav.contracts': 'Contratos',
+    'nav.automations': 'Automações',
+    'nav.notifications': 'Avisos',
+    'auth.heroTitle': 'Operação real para CRM, agenda, contratos e relacionamento.',
+    'auth.heroDescription':
+      'A AURA consolida o núcleo operacional com autenticação real, uploads seguros, mensageria e operação consistente entre web e mobile.',
+    'auth.feature.auth': 'Auth real com criação automática do tenant profissional',
+    'auth.feature.crm': 'Clientes, eventos, orçamentos e contratos persistidos',
+    'auth.feature.uploads': 'Uploads reais de imagem e PDF com timeline da cliente',
+    'auth.eyebrow': 'Entrar',
+    'auth.signInTitle': 'Acesse a operação da AURA',
+    'auth.signUpTitle': 'Crie sua conta profissional',
+    'auth.switchToSignUp': 'Criar conta',
+    'auth.switchToSignIn': 'Já tenho conta',
+    'auth.fullName': 'Nome completo',
+    'auth.businessName': 'Nome do negócio',
+    'auth.phone': 'Telefone',
+    'auth.whatsapp': 'WhatsApp',
+    'auth.email': 'Email',
+    'auth.password': 'Senha',
+    'auth.submitSignIn': 'Entrar no dashboard',
+    'auth.submitSignUp': 'Criar conta',
+    'auth.signupConfirmation':
+      'Conta criada. Confirme o email antes de entrar.',
+    'auth.signupSuccess': 'Conta criada com sucesso. Entrando na AURA.',
+    'auth.signupHint':
+      'Se o projeto Supabase estiver com confirmação de email ativa, o signup cria a conta e aguarda a confirmação. Com confirmação desativada, a sessão entra direto.',
+    'auth.missingConfig':
+      'Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY para habilitar o auth real.',
+    'auth.supabaseDocs': 'Documentação do Supabase',
+    'dashboard.eyebrow': 'Operação',
+    'dashboard.title': 'AURA em movimento',
+    'dashboard.description':
+      'Visão rápida do pipeline comercial, agenda da semana e clientes com maior prioridade operacional.',
+    'dashboard.newClient': 'Novo cliente',
+    'dashboard.viewAgenda': 'Ver agenda',
+    'dashboard.actingAs': 'Operando como {businessName} • tenant {tenantId}',
+    'dashboard.activeClients': 'Clientes ativos',
+    'dashboard.activeClientsHelper': 'Base viva com histórico por cliente e eventos.',
+    'dashboard.bookedEvents': 'Eventos fechados',
+    'dashboard.bookedEventsHelper': 'Eventos já convertidos para operação.',
+    'dashboard.pendingBudgets': 'Orçamentos pendentes',
+    'dashboard.pendingBudgetsHelper': 'Propostas que ainda precisam de follow-up.',
+    'dashboard.pipeline': 'Pipeline',
+    'dashboard.pipelineHelper': 'Receita potencial em negociação.',
+    'dashboard.nextAppointments': 'Próximos compromissos',
+    'dashboard.nextAppointmentsDescription': 'Agenda crítica para o próximo ciclo operacional.',
+    'dashboard.topClients': 'Clientes quentes',
+    'dashboard.topClientsDescription':
+      'Quem merece resposta rápida, proposta refinada ou check-in manual.',
+    'clients.eyebrow': 'CRM',
+    'clients.title': 'Clientes e relacionamento',
+    'clients.description':
+      'Cadastro centralizado com foco em telefone como identificador operacional, histórico por evento e priorização comercial.',
+    'clients.new': 'Nova cliente',
+    'clients.newDescription':
+      'Cadastro persistido no Supabase com segregação por profissional via RLS.',
+    'clients.fullName': 'Nome completo',
+    'clients.phone': 'Telefone',
+    'clients.email': 'Email',
+    'clients.city': 'Cidade',
+    'clients.instagram': 'Instagram',
+    'clients.stage': 'Etapa',
+    'clients.lifecycleStage': 'Etapa',
+    'clients.priorityScore': 'Score de prioridade',
+    'clients.notes': 'Observações',
+    'clients.eventDate': 'Data do evento',
+    'clients.location': 'Local',
+    'clients.guestCount': 'Convidadas',
+    'clients.save': 'Cadastrar cliente',
+    'clients.saved': 'Cliente cadastrada com sucesso.',
+    'clients.pipelineTitle': 'Pipeline de clientes',
+    'clients.pipelineDescription':
+      'Clientes persistidos com acesso ao detalhe operacional completo.',
+    'clients.search': 'Buscar por nome ou telefone',
+    'clients.searchPlaceholder': 'Ex.: Ana ou 71 99999-0000',
+    'clients.orderBy': 'Ordenar por',
+    'clients.order.updatedAt': 'Atualização recente',
+    'clients.order.createdAt': 'Cadastro recente',
+    'clients.order.priorityScore': 'Maior prioridade',
+    'clients.table.client': 'Cliente',
+    'clients.table.contact': 'Contato',
+    'clients.table.stage': 'Etapa',
+    'clients.table.score': 'Score',
+    'clients.table.since': 'Desde',
+    'clients.emptyTitle': 'Nenhuma cliente encontrada',
+    'clients.emptyDescription':
+      'Ajuste os filtros ou cadastre a primeira cliente para começar a operar o CRM.',
+    'agenda.eyebrow': 'Agenda',
+    'agenda.title': 'Visão de compromissos',
+    'agenda.description':
+      'Base inicial para agenda, conflitos e evolução futura com confirmação automática e lembretes.',
+    'agenda.cardTitle': 'Agenda operacional',
+    'agenda.cardDescription':
+      'Próximos compromissos organizados por status e janela horária.',
+    'agenda.status': 'Status',
+    'agenda.period': 'Período',
+    'agenda.period.today': 'Hoje',
+    'agenda.period.next7': 'Próximos 7 dias',
+    'agenda.period.all': 'Tudo',
+    'agenda.emptyTitle': 'Agenda vazia',
+    'agenda.emptyDescription':
+      'Nenhum compromisso encontrado para o período e status selecionados.',
+    'contracts.eyebrow': 'Contratos',
+    'contracts.title': 'Documentos e status',
+    'contracts.description':
+      'Fluxo simples e sólido para o MVP: upload manual de PDF, versionamento e acompanhamento de status.',
+    'contracts.listTitle': 'Contratos vinculados a eventos',
+    'contracts.listDescription':
+      'A mesma estrutura já suporta evolução para assinatura digital e automações futuras.',
+    'contracts.openPdf': 'Abrir / baixar PDF',
+    'contracts.openingPdf': 'Abrindo PDF...',
+    'contracts.emptyTitle': 'Nenhum contrato encontrado',
+    'contracts.emptyDescription':
+      'Nenhum contrato corresponde aos filtros selecionados.',
+    'contracts.pendingVersion': 'Versão pendente',
+    'contracts.awaitingUpload': 'aguardando',
+    'contracts.order.signedAt': 'Data de assinatura',
+    'contracts.versionCount.one': '{count} versão registrada',
+    'contracts.versionCount.other': '{count} versões registradas',
+    'contracts.uploadedAt': 'Upload em {date}',
+    'resource.loadingDescription': 'Carregando dados do workspace.',
+    'resource.errorTitle': 'Não foi possível carregar os dados',
+    'workspace.title': 'Beauty CRM',
+    'workspace.description':
+      'Operação diária para maquiadoras e penteadistas com foco em relacionamento, agenda e contratos.',
+    'workspace.sessionActive': 'Sessão ativa',
+    'workspace.signOut': 'Sair',
+    'mobile.loginTitle': 'AURA mobile',
+    'mobile.loginSubtitle':
+      'Acesso real ao núcleo operacional da agenda, clientes, orçamentos, contratos e arquivos.',
+    'mobile.notificationsTitle': 'Notificações internas',
+    'mobile.inboxBlocked': 'Texto livre indisponível fora da janela de 24h. Use um template aprovado.',
+    'mobile.clientDetailSubtitle': 'Resumo, timeline, agenda, orçamento, contratos e arquivos reais no dispositivo.',
+    'mobile.loadingWorkspaceTitle': 'Carregando',
+    'mobile.loadingWorkspaceDescription': 'Buscando o workspace completo da cliente.',
+    'mobile.clientDetailBack': 'Voltar para clientes',
+    'mobile.mobileValidatedTitle': 'Validação mobile',
+    'mobile.mobileValidatedDescription': 'Checklist objetivo para simulador ou dispositivo antes do piloto.',
+    'mobile.pendingConfigTitle': 'Configuração pendente',
+    'mobile.pendingConfigDescription': 'Defina EXPO_PUBLIC_SUPABASE_URL e EXPO_PUBLIC_SUPABASE_ANON_KEY para habilitar login real no mobile.',
+    'mobile.initializingTitle': 'Inicializando',
+    'mobile.initializingDescription': 'Conectando ao Supabase e preparando a operação real.',
+    'clientDetail.headerDescription': '{phone} • {email} • {city} • score operacional {score}/100.',
+    'clientDetail.eventsLabel': 'Eventos',
+    'clientDetail.eventsHelper': 'Eventos persistidos por cliente.',
+    'clientDetail.contractsHelper': 'PDFs versionados no Storage.',
+    'clientDetail.summaryTitle': 'Resumo',
+    'clientDetail.summaryDescription': 'Dados centrais da cliente com edição real.',
+    'clientDetail.timelineTitle': 'Timeline',
+    'clientDetail.timelineDescription': 'Linha do tempo real e ordenada da cliente.',
+    'clientDetail.timelineEmptyTitle': 'Timeline vazia',
+    'clientDetail.timelineEmptyDescription': 'Quando você criar eventos, orçamentos, contratos ou uploads, o histórico aparece aqui.',
+    'clientDetail.eventsTitle': 'Eventos',
+    'clientDetail.eventsDescription': 'Criação básica de evento com persistência real.',
+    'clientDetail.eventType': 'Tipo de evento',
+    'clientDetail.eventDate': 'Data e hora do evento',
+    'clientDetail.guestCount': 'Convidadas',
+    'clientDetail.noEventsTitle': 'Nenhum evento criado',
+    'clientDetail.noEventsDescription': 'Crie o primeiro evento para liberar orçamento, agenda e contratos.',
+    'clientDetail.appointmentsTitle': 'Agenda',
+    'clientDetail.appointmentsDescription': 'Agendamento básico com vínculo opcional ao evento.',
+    'clientDetail.relatedEvent': 'Vincular ao evento',
+    'clientDetail.noAppointmentsTitle': 'Nenhum agendamento',
+    'clientDetail.noAppointmentsDescription': 'Crie compromissos para organizar o dia da cliente e o próximo passo do atendimento.',
+    'clientDetail.budgetsTitle': 'Orçamentos',
+    'clientDetail.budgetsDescription': 'Criação básica de proposta com itens reais.',
+    'clientDetail.noBudgetsTitle': 'Nenhum orçamento',
+    'clientDetail.noBudgetsDescription': 'Crie a primeira proposta para acompanhar negociação e valor.',
+    'clientDetail.contractsTitle': 'Contratos',
+    'clientDetail.contractsDescription': 'Criação de contrato, nova versão e abertura segura do PDF.',
+    'clientDetail.noContractsTitle': 'Nenhum contrato',
+    'clientDetail.noContractsDescription': 'Selecione um PDF e crie o primeiro contrato deste atendimento.',
+    'clientDetail.noContractPdf': 'Contrato sem PDF',
+    'clientDetail.waitingManualAction': 'Aguardando ação manual',
+    'clientDetail.selectContractPdf': 'Selecionar PDF do contrato',
+    'clientDetail.assetsTitle': 'Arquivos',
+    'clientDetail.assetsDescription': 'Upload real de imagens e PDFs com preview básico do arquivo selecionado.',
+    'clientDetail.selectAsset': 'Selecionar imagem ou PDF',
+    'clientDetail.sendFile': 'Enviar arquivo',
+    'clientDetail.noFilesTitle': 'Nenhum arquivo anexado',
+    'clientDetail.noFilesDescription': 'Envie imagens de referência ou PDFs para manter tudo no perfil da cliente.',
+    'clientDetail.fileOpened': 'Arquivo aberto com sucesso.',
+    'clientDetail.inboxTitle': 'Inbox',
+    'clientDetail.inboxDescription': 'Inbox operacional com histórico persistido, opt-in, templates aprovados e respostas livres dentro da janela do WhatsApp.',
+    'clientDetail.optInTitle': 'Consentimento WhatsApp',
+    'clientDetail.noOptIn': 'Nenhum opt-in registrado ainda.',
+    'clientDetail.optInHint': 'Registre o consentimento antes de disparar templates operacionais e automações.',
+    'clientDetail.optInGrantedAt': 'Concedido em {date}',
+    'clientDetail.optInRegister': 'Registrar opt-in',
+    'clientDetail.optInRevoke': 'Revogar',
+    'clientDetail.windowOpen': 'Janela de atendimento aberta',
+    'clientDetail.windowExpired': 'Janela de atendimento expirada',
+    'clientDetail.windowUnavailable': 'Janela de atendimento indisponível',
+    'clientDetail.templateTitle': 'Template operacional',
+    'clientDetail.templateDescription': 'Use template aprovado para iniciar conversa fora da janela de 24h ou para fluxos operacionais governados.',
+    'clientDetail.templateLabel': 'Template',
+    'clientDetail.templateMappingPending': 'Mapeamento pendente',
+    'clientDetail.templateRequiresOptIn': 'Exige opt-in',
+    'clientDetail.templateNoOptIn': 'Sem opt-in obrigatório',
+    'clientDetail.noTemplatesTitle': 'Sem templates ativos',
+    'clientDetail.noTemplatesDescription': 'Cadastre um template aprovado no WhatsApp para habilitar mensagens iniciadas pela empresa.',
+    'clientDetail.sendTemplate': 'Enviar template',
+    'clientDetail.replyDescription': 'Texto livre só fica disponível enquanto a janela de atendimento estiver aberta.',
+    'clientDetail.freeTextPlaceholder': 'Digite uma resposta operacional ou contextual.',
+    'clientDetail.sendReply': 'Enviar resposta',
+    'clientDetail.historyTitle': 'Histórico',
+    'clientDetail.noConversationTitle': 'Nenhuma conversa registrada',
+    'clientDetail.noConversationDescription': 'Quando a cliente responder ou você enviar um template, o histórico aparece aqui.',
+    'clientDetail.statusTimelineTitle': 'Status e timeline de envio',
+    'clientDetail.noRemoteStatus': 'Nenhum status remoto registrado ainda.',
+    'clientDetail.remoteStatusEvent': 'Evento de status registrado',
+    'clientDetail.automationTitle': 'Execuções automáticas',
+    'clientDetail.noAutomationRuns': 'Nenhuma execução automática registrada ainda.',
+    'clientDetail.scheduledFor': 'Agendado para {date}',
+    'clientDetail.schedulerTitle': 'Execuções do scheduler',
+    'clientDetail.noSchedulerRuns': 'Nenhuma execução de scheduler registrada para esta cliente.',
+    'clientDetail.schedulerSummary': '{processed} processada(s), {skipped} pulada(s), {failed} falha(s).',
+    'clientDetail.saveClient': 'Salvar cliente',
+    'clientDetail.clientUpdated': 'Cliente atualizada com sucesso.',
+    'clientDetail.eventCreated': 'Evento criado com sucesso.',
+    'clientDetail.appointmentCreated': 'Agendamento criado com sucesso.',
+    'clientDetail.budgetCreated': 'Orçamento criado com sucesso.',
+    'clientDetail.contractCreated': 'Contrato criado com sucesso.',
+    'clientDetail.contractStatusUpdated': 'Status do contrato atualizado.',
+    'clientDetail.contractVersionUploaded': 'Nova versão do contrato enviada.',
+    'clientDetail.assetUploaded': 'Arquivo enviado com sucesso.',
+    'clientDetail.replySent': 'Resposta enviada com sucesso.',
+    'clientDetail.templateSent': 'Template enviado com sucesso.',
+    'clientDetail.optInSaved': 'Opt-in registrado com sucesso.',
+    'clientDetail.optOutSaved': 'Consentimento revogado com sucesso.',
+    'clientDetail.actionFailed': 'Não foi possível concluir a ação.',
+    'clientDetail.fileOpenFailed': 'Não foi possível abrir o arquivo.',
+    'clientDetail.success.saved': 'Alterações salvas com sucesso.',
+    'clientDetail.mobile.subtitle': 'Resumo, timeline, agenda, orçamento, contratos e arquivos reais no dispositivo.',
+    'mobile.clientDetail.loadingDescription': 'Buscando o workspace completo da cliente.',
+    'clientDetail.error.actionFailed': 'Não foi possível concluir a ação.',
+    'clientDetail.error.notFound': 'Cliente não encontrada.',
+    'clientDetail.assets.openError': 'Não foi possível abrir o arquivo.',
+    'clientDetail.header.description': 'score operacional {score}/100.',
+    'clientDetail.stats.eventsLabel': 'Eventos',
+    'clientDetail.stats.eventsHelper': 'Eventos persistidos por cliente.',
+    'clientDetail.stats.budgetsHelper': 'Propostas reais por evento.',
+    'clientDetail.stats.contractsHelper': 'PDFs versionados no Storage.',
+    'clientDetail.stats.priorityHelper': 'Score operacional atual.',
+    'clientDetail.summary.title': 'Resumo',
+    'clientDetail.summary.description': 'Dados centrais da cliente com edição real.',
+    'clientDetail.summary.save': 'Salvar cliente',
+    'clientDetail.summary.saved': 'Cliente atualizada com sucesso.',
+    'clientDetail.summary.deleteConfirm': 'Remover esta cliente e todos os dados relacionados?',
+    'clientDetail.timeline.title': 'Timeline',
+    'clientDetail.timeline.description': 'Linha do tempo real e ordenada da cliente.',
+    'clientDetail.timeline.emptyTitle': 'Timeline vazia',
+    'clientDetail.timeline.empty': 'Quando você criar eventos, orçamentos, contratos ou uploads, o histórico aparece aqui.',
+    'clientDetail.events.title': 'Eventos',
+    'clientDetail.events.description': 'Criação básica de evento com persistência real.',
+    'clientDetail.events.create': 'Criar evento',
+    'clientDetail.agenda.title': 'Agenda',
+    'clientDetail.agenda.description': 'Agendamento básico com vínculo opcional ao evento.',
+    'clientDetail.agenda.create': 'Criar agendamento',
+    'clientDetail.budgets.title': 'Orçamentos',
+    'clientDetail.budgets.description': 'Criação básica de proposta com itens reais.',
+    'clientDetail.budgets.create': 'Criar orçamento',
+    'clientDetail.contracts.title': 'Contratos',
+    'clientDetail.contracts.description': 'Criação de contrato, nova versão e abertura segura do PDF.',
+    'clientDetail.contracts.create': 'Criar contrato',
+    'clientDetail.contracts.selectPdf': 'Selecione um PDF de contrato.',
+    'clientDetail.contracts.missingPdf': 'Este contrato ainda não possui PDF disponível.',
+    'clientDetail.contracts.openPdf': 'Contrato aberto em nova guia.',
+    'clientDetail.assets.title': 'Arquivos',
+    'clientDetail.assets.description': 'Upload real de imagens e PDFs com persistência no Storage.',
+    'clientDetail.assets.selectFile': 'Selecione um arquivo para upload.',
+    'clientDetail.assets.upload': 'Enviar arquivo',
+    'clientDetail.assets.noCaption': 'Sem legenda',
+    'clientDetail.assets.openImage': 'Imagem aberta em nova guia.',
+    'clientDetail.assets.openFile': 'Arquivo aberto em nova guia.',
+    'clientDetail.inbox.title': 'Inbox',
+    'clientDetail.inbox.description': 'Inbox operacional com histórico persistido, opt-in, templates aprovados e respostas livres dentro da janela do WhatsApp.',
+    'clientDetail.inbox.optInTitle': 'Consentimento WhatsApp',
+    'clientDetail.inbox.optInStatus': 'Status {status} • origem {source}',
+    'clientDetail.inbox.optInEmpty': 'Nenhum opt-in registrado ainda.',
+    'clientDetail.inbox.pending': 'pendente',
+    'clientDetail.inbox.optInGrantedAt': 'Concedido em {value}',
+    'clientDetail.inbox.optInHint': 'Registre o consentimento antes de disparar templates operacionais e automações.',
+    'clientDetail.inbox.registerOptIn': 'Registrar opt-in',
+    'clientDetail.inbox.revokeOptIn': 'Revogar',
+    'clientDetail.inbox.optInSaved': 'Opt-in registrado com sucesso.',
+    'clientDetail.inbox.optOutSaved': 'Consentimento revogado com sucesso.',
+    'clientDetail.inbox.templateTitle': 'Template operacional',
+    'clientDetail.inbox.templateDescription': 'Use template aprovado para iniciar conversa fora da janela de 24h ou para fluxos operacionais governados.',
+    'clientDetail.inbox.templatesActive': '{count} ativos',
+    'clientDetail.inbox.templateField': 'Template',
+    'clientDetail.inbox.mappingPending': 'Mapeamento pendente',
+    'clientDetail.inbox.templateRequiresOptIn': 'Exige opt-in',
+    'clientDetail.inbox.templateNoOptIn': 'Sem opt-in obrigatório',
+    'clientDetail.inbox.templateBlocked': 'Este template exige opt-in válido antes do envio.',
+    'clientDetail.inbox.templateSelectionError': 'Selecione um template válido e confirme o opt-in antes do envio.',
+    'clientDetail.inbox.sendTemplate': 'Enviar template',
+    'clientDetail.inbox.templateSent': 'Template enviado com sucesso.',
+    'clientDetail.inbox.noTemplatesTitle': 'Sem templates ativos',
+    'clientDetail.inbox.noTemplatesDescription': 'Cadastre um template aprovado no WhatsApp para habilitar mensagens iniciadas pela empresa.',
+    'clientDetail.inbox.replyTitle': 'Responder cliente',
+    'clientDetail.inbox.replyDescription': 'Texto livre só fica disponível enquanto a janela de atendimento estiver aberta.',
+    'clientDetail.inbox.replyPlaceholder': 'Digite uma resposta operacional ou contextual.',
+    'clientDetail.inbox.sendReply': 'Enviar resposta',
+    'clientDetail.inbox.replySent': 'Resposta enviada com sucesso.',
+    'clientDetail.inbox.windowOpen': 'Janela de atendimento aberta',
+    'clientDetail.inbox.windowExpired': 'Janela de atendimento expirada',
+    'clientDetail.inbox.windowUnavailable': 'Janela de atendimento indisponível',
+    'clientDetail.inbox.windowExpiredError': 'A janela de atendimento expirou. Use um template aprovado para iniciar a conversa.',
+    'clientDetail.inbox.historyEmptyTitle': 'Nenhuma conversa registrada',
+    'clientDetail.inbox.historyEmpty': 'Quando a cliente responder ou você enviar um template, o histórico aparecerá aqui.',
+    'clientDetail.inbox.templateFallback': 'Template operacional',
+    'clientDetail.inbox.retrySent': 'Mensagem reenviada com sucesso.',
+    'clientDetail.inbox.statusHistoryTitle': 'Status e timeline de envio',
+    'clientDetail.inbox.statusHistoryEmpty': 'Nenhum status remoto registrado ainda.',
+    'clientDetail.inbox.statusRecorded': 'Evento de status registrado',
+    'clientDetail.inbox.automationTitle': 'Automações operacionais',
+    'clientDetail.inbox.automationDescription': 'Rodada manual para validar lembretes e follow-up desta cliente.',
+    'clientDetail.inbox.automationLogs': '{count} logs',
+    'clientDetail.inbox.automationResult': '{processed} automação(ões) processada(s), {skipped} pulada(s) e {failed} falha(s).',
+    'clientDetail.inbox.runAutomations': 'Executar automações da cliente',
+    'clientDetail.inbox.automationHistoryTitle': 'Execuções automáticas',
+    'clientDetail.inbox.automationScheduledFor': 'Agendado para {value}',
+    'clientDetail.inbox.automationHistoryEmpty': 'Nenhuma execução automática registrada ainda.',
+    'clientDetail.inbox.schedulerTitle': 'Execuções do scheduler',
+    'clientDetail.inbox.schedulerSummary': '{processed} processada(s), {skipped} pulada(s), {failed} falha(s).',
+    'clientDetail.inbox.schedulerEmpty': 'Nenhuma execução de scheduler registrada para esta cliente.',
+  },
+  'en-US': {
+    'common.appName': 'AURA',
+    'common.loading': 'Loading...',
+    'common.processing': 'Processing...',
+    'common.save': 'Save',
+    'common.cancel': 'Cancel',
+    'common.all': 'All',
+    'common.delete': 'Delete',
+    'common.create': 'Create',
+    'common.openFile': 'Open file',
+    'common.openPdf': 'Open PDF',
+    'common.backToDashboard': 'Back to dashboard',
+    'common.backToClients': 'Back to clients',
+    'common.noEmail': 'No email',
+    'common.noLocation': 'No location',
+    'common.notInformed': 'Not informed',
+    'common.automaticSync': 'Automatic sync every 15 seconds.',
+    'common.localeSelectorLabel': 'Interface language',
+    'common.title': 'Title',
+    'common.type': 'Type',
+    'common.status': 'Status',
+    'common.start': 'Start',
+    'common.end': 'End',
+    'common.event': 'Event',
+    'common.message': 'Message',
+    'common.history': 'History',
+    'common.files': 'Files',
+    'common.filters': 'Filters',
+    'common.retry': 'Retry',
+    'common.linkEvent': 'Link to event',
+    'common.caption': 'Caption',
+    'common.file': 'File',
+    'common.validUntil': 'Valid until',
+    'common.discount': 'Discount',
+    'common.quantity': 'Quantity',
+    'common.unitPrice': 'Unit price',
+    'common.initialStatus': 'Initial status',
+    'common.signedAt': 'Signed at',
+    'common.contractPdf': 'Contract PDF',
+    'common.newVersion': 'New version',
+    'common.addItem': 'Add item',
+    'common.reply': 'Reply to client',
+    'common.select': 'Select',
+    'common.currency': 'Currency',
+    'common.description': 'Description',
+    'common.noSpecificEvent': 'No specific event',
+    'nav.dashboard': 'Dashboard',
+    'nav.clients': 'Clients',
+    'nav.agenda': 'Schedule',
+    'nav.budgets': 'Budgets',
+    'nav.contracts': 'Contracts',
+    'nav.automations': 'Automations',
+    'nav.notifications': 'Alerts',
+    'auth.heroTitle': 'Real operations for CRM, schedule, contracts, and relationship management.',
+    'auth.heroDescription':
+      'AURA consolidates the operational core with real authentication, secure uploads, messaging, and consistent web/mobile workflows.',
+    'auth.feature.auth': 'Real auth with automatic professional tenant creation',
+    'auth.feature.crm': 'Clients, events, budgets, and contracts persisted',
+    'auth.feature.uploads': 'Real image and PDF uploads with client timeline',
+    'auth.eyebrow': 'Sign in',
+    'auth.signInTitle': 'Access AURA operations',
+    'auth.signUpTitle': 'Create your professional account',
+    'auth.switchToSignUp': 'Create account',
+    'auth.switchToSignIn': 'I already have an account',
+    'auth.fullName': 'Full name',
+    'auth.businessName': 'Business name',
+    'auth.phone': 'Phone',
+    'auth.whatsapp': 'WhatsApp',
+    'auth.email': 'Email',
+    'auth.password': 'Password',
+    'auth.submitSignIn': 'Enter dashboard',
+    'auth.submitSignUp': 'Create account',
+    'auth.signupConfirmation':
+      'Account created. Confirm your email before signing in.',
+    'auth.signupSuccess': 'Account created successfully. Entering AURA.',
+    'auth.signupHint':
+      'If email confirmation is enabled in Supabase, signup creates the account and waits for confirmation. If disabled, the session starts immediately.',
+    'auth.missingConfig':
+      'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to enable real auth.',
+    'auth.supabaseDocs': 'Supabase documentation',
+    'dashboard.eyebrow': 'Operations',
+    'dashboard.title': 'AURA in motion',
+    'dashboard.description':
+      'Quick view of the sales pipeline, weekly schedule, and clients with the highest operational priority.',
+    'dashboard.newClient': 'New client',
+    'dashboard.viewAgenda': 'View schedule',
+    'dashboard.actingAs': 'Operating as {businessName} • tenant {tenantId}',
+    'dashboard.activeClients': 'Active clients',
+    'dashboard.activeClientsHelper': 'Living base with per-client and event history.',
+    'dashboard.bookedEvents': 'Booked events',
+    'dashboard.bookedEventsHelper': 'Events already converted into operation.',
+    'dashboard.pendingBudgets': 'Pending budgets',
+    'dashboard.pendingBudgetsHelper': 'Proposals that still need follow-up.',
+    'dashboard.pipeline': 'Pipeline',
+    'dashboard.pipelineHelper': 'Potential revenue in negotiation.',
+    'dashboard.nextAppointments': 'Upcoming appointments',
+    'dashboard.nextAppointmentsDescription': 'Critical schedule for the next operational cycle.',
+    'dashboard.topClients': 'Hot clients',
+    'dashboard.topClientsDescription':
+      'Who deserves a fast reply, refined proposal, or manual check-in.',
+    'clients.eyebrow': 'CRM',
+    'clients.title': 'Clients and relationships',
+    'clients.description':
+      'Centralized registration focused on phone number as the operational identifier, event history, and commercial prioritization.',
+    'clients.new': 'New client',
+    'clients.newDescription':
+      'Persisted registration in Supabase with per-professional isolation via RLS.',
+    'clients.fullName': 'Full name',
+    'clients.phone': 'Phone',
+    'clients.email': 'Email',
+    'clients.city': 'City',
+    'clients.instagram': 'Instagram',
+    'clients.stage': 'Stage',
+    'clients.lifecycleStage': 'Stage',
+    'clients.priorityScore': 'Priority score',
+    'clients.notes': 'Notes',
+    'clients.eventDate': 'Event date',
+    'clients.location': 'Location',
+    'clients.guestCount': 'Guests',
+    'clients.save': 'Create client',
+    'clients.saved': 'Client created successfully.',
+    'clients.pipelineTitle': 'Client pipeline',
+    'clients.pipelineDescription':
+      'Persisted clients with full access to operational details.',
+    'clients.search': 'Search by name or phone',
+    'clients.searchPlaceholder': 'Example: Ana or 71 99999-0000',
+    'clients.orderBy': 'Order by',
+    'clients.order.updatedAt': 'Recently updated',
+    'clients.order.createdAt': 'Recently created',
+    'clients.order.priorityScore': 'Highest priority',
+    'clients.table.client': 'Client',
+    'clients.table.contact': 'Contact',
+    'clients.table.stage': 'Stage',
+    'clients.table.score': 'Score',
+    'clients.table.since': 'Since',
+    'clients.emptyTitle': 'No clients found',
+    'clients.emptyDescription':
+      'Adjust the filters or create the first client to start operating the CRM.',
+    'agenda.eyebrow': 'Schedule',
+    'agenda.title': 'Appointment overview',
+    'agenda.description':
+      'Initial base for schedule, conflicts, and future evolution with confirmation and reminders.',
+    'agenda.cardTitle': 'Operational schedule',
+    'agenda.cardDescription':
+      'Upcoming appointments organized by status and time window.',
+    'agenda.status': 'Status',
+    'agenda.period': 'Period',
+    'agenda.period.today': 'Today',
+    'agenda.period.next7': 'Next 7 days',
+    'agenda.period.all': 'All',
+    'agenda.emptyTitle': 'Empty schedule',
+    'agenda.emptyDescription':
+      'No appointments were found for the selected period and status.',
+    'contracts.eyebrow': 'Contracts',
+    'contracts.title': 'Documents and status',
+    'contracts.description':
+      'Simple and solid MVP flow: manual PDF upload, versioning, and status tracking.',
+    'contracts.listTitle': 'Contracts linked to events',
+    'contracts.listDescription':
+      'The same structure already supports future digital signature and automation workflows.',
+    'contracts.openPdf': 'Open / download PDF',
+    'contracts.openingPdf': 'Opening PDF...',
+    'contracts.emptyTitle': 'No contracts found',
+    'contracts.emptyDescription':
+      'No contracts match the selected filters.',
+    'contracts.pendingVersion': 'Pending version',
+    'contracts.awaitingUpload': 'pending',
+    'contracts.order.signedAt': 'Signature date',
+    'contracts.versionCount.one': '{count} version recorded',
+    'contracts.versionCount.other': '{count} versions recorded',
+    'contracts.uploadedAt': 'Uploaded on {date}',
+    'resource.loadingDescription': 'Loading workspace data.',
+    'resource.errorTitle': 'Could not load the data',
+    'workspace.title': 'Beauty CRM',
+    'workspace.description':
+      'Daily operations for makeup artists and hairstylists focused on relationships, schedule, and contracts.',
+    'workspace.sessionActive': 'Active session',
+    'workspace.signOut': 'Sign out',
+    'mobile.loginTitle': 'AURA mobile',
+    'mobile.loginSubtitle':
+      'Real access to the operational core for schedule, clients, budgets, contracts, and files.',
+    'mobile.notificationsTitle': 'Internal notifications',
+    'mobile.inboxBlocked': 'Free text is unavailable outside the 24-hour window. Use an approved template.',
+    'mobile.clientDetailSubtitle': 'Summary, timeline, schedule, budget, contracts, and real files on device.',
+    'mobile.loadingWorkspaceTitle': 'Loading',
+    'mobile.loadingWorkspaceDescription': 'Fetching the complete client workspace.',
+    'mobile.clientDetailBack': 'Back to clients',
+    'mobile.mobileValidatedTitle': 'Mobile validation',
+    'mobile.mobileValidatedDescription': 'Objective simulator or device checklist before the pilot.',
+    'mobile.pendingConfigTitle': 'Pending setup',
+    'mobile.pendingConfigDescription': 'Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to enable real login on mobile.',
+    'mobile.initializingTitle': 'Initializing',
+    'mobile.initializingDescription': 'Connecting to Supabase and preparing real operations.',
+    'clientDetail.headerDescription': '{phone} • {email} • {city} • operational score {score}/100.',
+    'clientDetail.eventsLabel': 'Events',
+    'clientDetail.eventsHelper': 'Persisted events per client.',
+    'clientDetail.contractsHelper': 'Versioned PDFs in Storage.',
+    'clientDetail.summaryTitle': 'Summary',
+    'clientDetail.summaryDescription': 'Core client data with real editing.',
+    'clientDetail.timelineTitle': 'Timeline',
+    'clientDetail.timelineDescription': 'Real ordered client timeline.',
+    'clientDetail.timelineEmptyTitle': 'Empty timeline',
+    'clientDetail.timelineEmptyDescription': 'When you create events, budgets, contracts, or uploads, history will appear here.',
+    'clientDetail.eventsTitle': 'Events',
+    'clientDetail.eventsDescription': 'Basic event creation with real persistence.',
+    'clientDetail.eventType': 'Event type',
+    'clientDetail.eventDate': 'Event date and time',
+    'clientDetail.guestCount': 'Guests',
+    'clientDetail.noEventsTitle': 'No events yet',
+    'clientDetail.noEventsDescription': 'Create the first event to unlock budgets, schedule, and contracts.',
+    'clientDetail.appointmentsTitle': 'Schedule',
+    'clientDetail.appointmentsDescription': 'Basic appointment creation with optional event link.',
+    'clientDetail.relatedEvent': 'Link to event',
+    'clientDetail.noAppointmentsTitle': 'No appointments',
+    'clientDetail.noAppointmentsDescription': 'Create appointments to organize the client day and next service step.',
+    'clientDetail.budgetsTitle': 'Budgets',
+    'clientDetail.budgetsDescription': 'Basic proposal creation with real items.',
+    'clientDetail.noBudgetsTitle': 'No budgets',
+    'clientDetail.noBudgetsDescription': 'Create the first proposal to track negotiation and value.',
+    'clientDetail.contractsTitle': 'Contracts',
+    'clientDetail.contractsDescription': 'Contract creation, new versions, and secure PDF opening.',
+    'clientDetail.noContractsTitle': 'No contracts',
+    'clientDetail.noContractsDescription': 'Select a PDF and create the first contract for this service.',
+    'clientDetail.noContractPdf': 'Contract without PDF',
+    'clientDetail.waitingManualAction': 'Waiting for manual action',
+    'clientDetail.selectContractPdf': 'Select contract PDF',
+    'clientDetail.assetsTitle': 'Files',
+    'clientDetail.assetsDescription': 'Real image and PDF uploads with basic selected-file preview.',
+    'clientDetail.selectAsset': 'Select image or PDF',
+    'clientDetail.sendFile': 'Upload file',
+    'clientDetail.noFilesTitle': 'No attached files',
+    'clientDetail.noFilesDescription': 'Upload inspiration images or PDFs to keep everything in the client profile.',
+    'clientDetail.fileOpened': 'File opened successfully.',
+    'clientDetail.inboxTitle': 'Inbox',
+    'clientDetail.inboxDescription': 'Operational inbox with persisted history, auditable opt-in, approved templates, and free-text replies inside the WhatsApp window.',
+    'clientDetail.optInTitle': 'WhatsApp consent',
+    'clientDetail.noOptIn': 'No opt-in recorded yet.',
+    'clientDetail.optInHint': 'Register consent before sending operational templates and automations.',
+    'clientDetail.optInGrantedAt': 'Granted on {date}',
+    'clientDetail.optInRegister': 'Register opt-in',
+    'clientDetail.optInRevoke': 'Revoke',
+    'clientDetail.windowOpen': 'Conversation window is open',
+    'clientDetail.windowExpired': 'Conversation window expired',
+    'clientDetail.windowUnavailable': 'Conversation window unavailable',
+    'clientDetail.templateTitle': 'Operational template',
+    'clientDetail.templateDescription': 'Use an approved template to start a conversation outside the 24-hour window or for governed operational flows.',
+    'clientDetail.templateLabel': 'Template',
+    'clientDetail.templateMappingPending': 'Pending mapping',
+    'clientDetail.templateRequiresOptIn': 'Requires opt-in',
+    'clientDetail.templateNoOptIn': 'No opt-in required',
+    'clientDetail.noTemplatesTitle': 'No active templates',
+    'clientDetail.noTemplatesDescription': 'Register an approved WhatsApp template to enable business-initiated messages.',
+    'clientDetail.sendTemplate': 'Send template',
+    'clientDetail.replyDescription': 'Free text is only available while the conversation window is open.',
+    'clientDetail.freeTextPlaceholder': 'Type an operational or contextual reply.',
+    'clientDetail.sendReply': 'Send reply',
+    'clientDetail.historyTitle': 'History',
+    'clientDetail.noConversationTitle': 'No conversation yet',
+    'clientDetail.noConversationDescription': 'When the client replies or you send a template, history will appear here.',
+    'clientDetail.statusTimelineTitle': 'Status and delivery timeline',
+    'clientDetail.noRemoteStatus': 'No remote status recorded yet.',
+    'clientDetail.remoteStatusEvent': 'Status event recorded',
+    'clientDetail.automationTitle': 'Automation runs',
+    'clientDetail.noAutomationRuns': 'No automation execution recorded yet.',
+    'clientDetail.scheduledFor': 'Scheduled for {date}',
+    'clientDetail.schedulerTitle': 'Scheduler runs',
+    'clientDetail.noSchedulerRuns': 'No scheduler execution recorded for this client.',
+    'clientDetail.schedulerSummary': '{processed} processed, {skipped} skipped, {failed} failed.',
+    'clientDetail.saveClient': 'Save client',
+    'clientDetail.clientUpdated': 'Client updated successfully.',
+    'clientDetail.eventCreated': 'Event created successfully.',
+    'clientDetail.appointmentCreated': 'Appointment created successfully.',
+    'clientDetail.budgetCreated': 'Budget created successfully.',
+    'clientDetail.contractCreated': 'Contract created successfully.',
+    'clientDetail.contractStatusUpdated': 'Contract status updated.',
+    'clientDetail.contractVersionUploaded': 'New contract version uploaded.',
+    'clientDetail.assetUploaded': 'File uploaded successfully.',
+    'clientDetail.replySent': 'Reply sent successfully.',
+    'clientDetail.templateSent': 'Template sent successfully.',
+    'clientDetail.optInSaved': 'Opt-in saved successfully.',
+    'clientDetail.optOutSaved': 'Consent revoked successfully.',
+    'clientDetail.actionFailed': 'Could not complete the action.',
+    'clientDetail.fileOpenFailed': 'Could not open the file.',
+    'clientDetail.success.saved': 'Changes saved successfully.',
+    'clientDetail.mobile.subtitle': 'Summary, timeline, schedule, budget, contracts, and real files on the device.',
+    'mobile.clientDetail.loadingDescription': 'Loading the complete client workspace.',
+    'clientDetail.error.actionFailed': 'Could not complete the action.',
+    'clientDetail.error.notFound': 'Client not found.',
+    'clientDetail.assets.openError': 'Could not open the file.',
+    'clientDetail.header.description': 'operational score {score}/100.',
+    'clientDetail.stats.eventsLabel': 'Events',
+    'clientDetail.stats.eventsHelper': 'Events persisted per client.',
+    'clientDetail.stats.budgetsHelper': 'Real proposals by event.',
+    'clientDetail.stats.contractsHelper': 'PDFs versioned in Storage.',
+    'clientDetail.stats.priorityHelper': 'Current operational score.',
+    'clientDetail.summary.title': 'Summary',
+    'clientDetail.summary.description': 'Core client data with real editing.',
+    'clientDetail.summary.save': 'Save client',
+    'clientDetail.summary.saved': 'Client updated successfully.',
+    'clientDetail.summary.deleteConfirm': 'Remove this client and all related data?',
+    'clientDetail.timeline.title': 'Timeline',
+    'clientDetail.timeline.description': 'Real, ordered client timeline.',
+    'clientDetail.timeline.emptyTitle': 'Empty timeline',
+    'clientDetail.timeline.empty': 'When you create events, budgets, contracts, or uploads, the history will appear here.',
+    'clientDetail.events.title': 'Events',
+    'clientDetail.events.description': 'Basic event creation with real persistence.',
+    'clientDetail.events.create': 'Create event',
+    'clientDetail.agenda.title': 'Schedule',
+    'clientDetail.agenda.description': 'Basic appointment flow with optional event linkage.',
+    'clientDetail.agenda.create': 'Create appointment',
+    'clientDetail.budgets.title': 'Budgets',
+    'clientDetail.budgets.description': 'Basic proposal creation with real items.',
+    'clientDetail.budgets.create': 'Create budget',
+    'clientDetail.contracts.title': 'Contracts',
+    'clientDetail.contracts.description': 'Contract creation, new version upload, and secure PDF access.',
+    'clientDetail.contracts.create': 'Create contract',
+    'clientDetail.contracts.selectPdf': 'Select a contract PDF.',
+    'clientDetail.contracts.missingPdf': 'This contract does not have an available PDF yet.',
+    'clientDetail.contracts.openPdf': 'Contract opened in a new tab.',
+    'clientDetail.assets.title': 'Files',
+    'clientDetail.assets.description': 'Real image and PDF uploads with persistence in Storage.',
+    'clientDetail.assets.selectFile': 'Select a file to upload.',
+    'clientDetail.assets.upload': 'Upload file',
+    'clientDetail.assets.noCaption': 'No caption',
+    'clientDetail.assets.openImage': 'Image opened in a new tab.',
+    'clientDetail.assets.openFile': 'File opened in a new tab.',
+    'clientDetail.inbox.title': 'Inbox',
+    'clientDetail.inbox.description': 'Real client inbox with auditable opt-in, free replies inside the window, and approved templates for operational flows.',
+    'clientDetail.inbox.optInTitle': 'WhatsApp consent',
+    'clientDetail.inbox.optInStatus': 'Status {status} • source {source}',
+    'clientDetail.inbox.optInEmpty': 'No opt-in recorded yet.',
+    'clientDetail.inbox.pending': 'pending',
+    'clientDetail.inbox.optInGrantedAt': 'Granted at {value}',
+    'clientDetail.inbox.optInHint': 'Record consent before sending operational templates and automations.',
+    'clientDetail.inbox.registerOptIn': 'Register opt-in',
+    'clientDetail.inbox.revokeOptIn': 'Revoke',
+    'clientDetail.inbox.optInSaved': 'Opt-in saved successfully.',
+    'clientDetail.inbox.optOutSaved': 'Consent revoked successfully.',
+    'clientDetail.inbox.templateTitle': 'Operational template',
+    'clientDetail.inbox.templateDescription': 'Use an approved template to start a conversation outside the 24h window or for governed operational flows.',
+    'clientDetail.inbox.templatesActive': '{count} active',
+    'clientDetail.inbox.templateField': 'Template',
+    'clientDetail.inbox.mappingPending': 'Mapping pending',
+    'clientDetail.inbox.templateRequiresOptIn': 'Requires opt-in',
+    'clientDetail.inbox.templateNoOptIn': 'No opt-in required',
+    'clientDetail.inbox.templateBlocked': 'This template requires a valid opt-in before sending.',
+    'clientDetail.inbox.templateSelectionError': 'Select a valid template and confirm opt-in before sending.',
+    'clientDetail.inbox.sendTemplate': 'Send template',
+    'clientDetail.inbox.templateSent': 'Template sent successfully.',
+    'clientDetail.inbox.noTemplatesTitle': 'No active templates',
+    'clientDetail.inbox.noTemplatesDescription': 'Register an approved WhatsApp template to enable business-initiated messages.',
+    'clientDetail.inbox.replyTitle': 'Reply to client',
+    'clientDetail.inbox.replyDescription': 'Free text replies are only available while the customer service window is open.',
+    'clientDetail.inbox.replyPlaceholder': 'Type an operational or contextual reply.',
+    'clientDetail.inbox.sendReply': 'Send reply',
+    'clientDetail.inbox.replySent': 'Reply sent successfully.',
+    'clientDetail.inbox.windowOpen': 'Customer service window open',
+    'clientDetail.inbox.windowExpired': 'Customer service window expired',
+    'clientDetail.inbox.windowUnavailable': 'Customer service window unavailable',
+    'clientDetail.inbox.windowExpiredError': 'The customer service window has expired. Use an approved template to start the conversation.',
+    'clientDetail.inbox.historyEmptyTitle': 'No conversation recorded',
+    'clientDetail.inbox.historyEmpty': 'When the client replies or you send a template, the history will appear here.',
+    'clientDetail.inbox.templateFallback': 'Operational template',
+    'clientDetail.inbox.retrySent': 'Message resent successfully.',
+    'clientDetail.inbox.statusHistoryTitle': 'Delivery status and timeline',
+    'clientDetail.inbox.statusHistoryEmpty': 'No remote status recorded yet.',
+    'clientDetail.inbox.statusRecorded': 'Status event recorded',
+    'clientDetail.inbox.automationTitle': 'Operational automations',
+    'clientDetail.inbox.automationDescription': 'Manual run to validate reminders and follow-up for this client.',
+    'clientDetail.inbox.automationLogs': '{count} logs',
+    'clientDetail.inbox.automationResult': '{processed} automation(s) processed, {skipped} skipped, and {failed} failed.',
+    'clientDetail.inbox.runAutomations': 'Run client automations',
+    'clientDetail.inbox.automationHistoryTitle': 'Automatic runs',
+    'clientDetail.inbox.automationScheduledFor': 'Scheduled for {value}',
+    'clientDetail.inbox.automationHistoryEmpty': 'No automatic run recorded yet.',
+    'clientDetail.inbox.schedulerTitle': 'Scheduler runs',
+    'clientDetail.inbox.schedulerSummary': '{processed} processed, {skipped} skipped, {failed} failed.',
+    'clientDetail.inbox.schedulerEmpty': 'No scheduler run recorded for this client.',
+  },
+} as const;
+
+type TranslationDictionary = typeof dictionaries['pt-BR'];
+export type TranslationKey = keyof TranslationDictionary;
+
+export type I18nPersistenceAdapter = {
+  load: () => Promise<SupportedLocale | null | undefined>;
+  save: (locale: SupportedLocale) => Promise<void> | void;
+};
+
+type I18nContextValue = {
+  locale: SupportedLocale;
+  locales: readonly SupportedLocale[];
+  setLocale: (locale: SupportedLocale) => Promise<void>;
+  t: (key: TranslationKey, params?: TranslationParams) => string;
+  formatDate: (value: string) => string;
+  formatDateTime: (value: string) => string;
+  formatCurrency: (value: number, currency?: string) => string;
+  localeLabel: (locale: SupportedLocale) => string;
+  lifecycleStageLabel: (value: ClientInput['lifecycleStage']) => string;
+  eventStatusLabel: (value: ClientEventInput['status']) => string;
+  appointmentStatusLabel: (value: AppointmentInput['status']) => string;
+  appointmentTypeLabel: (value: AppointmentInput['appointmentType']) => string;
+  budgetStatusLabel: (value: BudgetInput['status']) => string;
+  contractStatusLabel: (value: ContractInput['status']) => string;
+  messageStatusLabel: (value: Message['status']) => string;
+};
+
+const I18nContext = createContext<I18nContextValue | null>(null);
+
+function interpolate(message: string, params?: TranslationParams) {
+  if (!params) {
+    return message;
+  }
+
+  return Object.entries(params).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    message,
+  );
+}
+
+export function normalizeLocale(value: string | null | undefined): SupportedLocale {
+  const parsed = supportedLocaleSchema.safeParse(value);
+  return parsed.success ? parsed.data : auraDefaultLocale;
+}
+
+export function translate(
+  locale: SupportedLocale,
+  key: TranslationKey,
+  params?: TranslationParams,
+) {
+  const dictionary = dictionaries[locale] ?? dictionaries[auraDefaultLocale];
+  return interpolate(dictionary[key] ?? dictionaries[auraDefaultLocale][key], params);
+}
+
+function labelByRecord<T extends string>(
+  locale: SupportedLocale,
+  value: T,
+  records: Record<SupportedLocale, Record<T, string>>,
+) {
+  return records[locale]?.[value] ?? records[auraDefaultLocale][value];
+}
+
+const lifecycleStageLabels: Record<SupportedLocale, Record<ClientInput['lifecycleStage'], string>> = {
+  'pt-BR': {
+    lead: 'Lead',
+    qualified: 'Qualificada',
+    proposal: 'Proposta',
+    confirmed: 'Confirmada',
+    archived: 'Arquivada',
+  },
+  'en-US': {
+    lead: 'Lead',
+    qualified: 'Qualified',
+    proposal: 'Proposal',
+    confirmed: 'Confirmed',
+    archived: 'Archived',
+  },
+};
+
+const eventStatusLabels: Record<SupportedLocale, Record<ClientEventInput['status'], string>> = {
+  'pt-BR': {
+    lead: 'Lead',
+    quoted: 'Orçada',
+    booked: 'Reservada',
+    completed: 'Concluída',
+    cancelled: 'Cancelada',
+  },
+  'en-US': {
+    lead: 'Lead',
+    quoted: 'Quoted',
+    booked: 'Booked',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  },
+};
+
+const appointmentStatusLabels: Record<SupportedLocale, Record<AppointmentInput['status'], string>> = {
+  'pt-BR': {
+    scheduled: 'Agendado',
+    confirmed: 'Confirmado',
+    completed: 'Concluído',
+    cancelled: 'Cancelado',
+    no_show: 'No-show',
+  },
+  'en-US': {
+    scheduled: 'Scheduled',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    no_show: 'No-show',
+  },
+};
+
+const appointmentTypeLabels: Record<
+  SupportedLocale,
+  Record<AppointmentInput['appointmentType'], string>
+> = {
+  'pt-BR': {
+    consultation: 'Consulta',
+    trial: 'Teste',
+    event: 'Evento',
+    follow_up: 'Pós-atendimento',
+  },
+  'en-US': {
+    consultation: 'Consultation',
+    trial: 'Trial',
+    event: 'Event',
+    follow_up: 'Follow-up',
+  },
+};
+
+const budgetStatusLabels: Record<SupportedLocale, Record<BudgetInput['status'], string>> = {
+  'pt-BR': {
+    draft: 'Rascunho',
+    sent: 'Enviado',
+    approved: 'Aprovado',
+    rejected: 'Recusado',
+    expired: 'Expirado',
+  },
+  'en-US': {
+    draft: 'Draft',
+    sent: 'Sent',
+    approved: 'Approved',
+    rejected: 'Rejected',
+    expired: 'Expired',
+  },
+};
+
+const contractStatusLabels: Record<SupportedLocale, Record<ContractInput['status'], string>> = {
+  'pt-BR': {
+    draft: 'Rascunho',
+    uploaded: 'Upload concluído',
+    sent: 'Enviado',
+    signed: 'Assinado',
+    cancelled: 'Cancelado',
+  },
+  'en-US': {
+    draft: 'Draft',
+    uploaded: 'Uploaded',
+    sent: 'Sent',
+    signed: 'Signed',
+    cancelled: 'Cancelled',
+  },
+};
+
+const messageStatusLabels: Record<SupportedLocale, Record<Message['status'], string>> = {
+  'pt-BR': {
+    pending: 'Pendente',
+    accepted: 'Aceita',
+    sent: 'Enviada',
+    delivered: 'Entregue',
+    read: 'Lida',
+    received: 'Recebida',
+    failed: 'Falhou',
+  },
+  'en-US': {
+    pending: 'Pending',
+    accepted: 'Accepted',
+    sent: 'Sent',
+    delivered: 'Delivered',
+    read: 'Read',
+    received: 'Received',
+    failed: 'Failed',
+  },
+};
+
+export function AuraI18nProvider({
+  children,
+  preferredLocale,
+  persistenceAdapter,
+  onLocaleChange,
+}: PropsWithChildren<{
+  preferredLocale?: SupportedLocale | null;
+  persistenceAdapter?: I18nPersistenceAdapter;
+  onLocaleChange?: (locale: SupportedLocale) => Promise<void> | void;
+}>) {
+  const [locale, setLocaleState] = useState<SupportedLocale>(
+    normalizeLocale(preferredLocale),
+  );
+
+  useEffect(() => {
+    if (!preferredLocale) {
+      return;
+    }
+
+    setLocaleState(normalizeLocale(preferredLocale));
+  }, [preferredLocale]);
+
+  useEffect(() => {
+    if (preferredLocale || !persistenceAdapter) {
+      return;
+    }
+
+    let active = true;
+
+    void persistenceAdapter.load().then((savedLocale) => {
+      if (!active || !savedLocale) {
+        return;
+      }
+
+      setLocaleState(normalizeLocale(savedLocale));
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [persistenceAdapter, preferredLocale]);
+
+  const value = useMemo<I18nContextValue>(
+    () => ({
+      locale,
+      locales: auraSupportedLocales,
+      setLocale: async (nextLocale) => {
+        const normalizedLocale = normalizeLocale(nextLocale);
+        setLocaleState(normalizedLocale);
+        await persistenceAdapter?.save(normalizedLocale);
+        await onLocaleChange?.(normalizedLocale);
+      },
+      t: (key, params) => translate(locale, key, params),
+      formatDate: (value) => baseFormatDate(value, locale),
+      formatDateTime: (value) => baseFormatDateTime(value, locale),
+      formatCurrency: (value, currency = 'BRL') =>
+        baseFormatCurrency(value, locale, currency),
+      localeLabel: (value) => localeLabels[value],
+      lifecycleStageLabel: (value) =>
+        labelByRecord(locale, value, lifecycleStageLabels),
+      eventStatusLabel: (value) => labelByRecord(locale, value, eventStatusLabels),
+      appointmentStatusLabel: (value) =>
+        labelByRecord(locale, value, appointmentStatusLabels),
+      appointmentTypeLabel: (value) =>
+        labelByRecord(locale, value, appointmentTypeLabels),
+      budgetStatusLabel: (value) =>
+        labelByRecord(locale, value, budgetStatusLabels),
+      contractStatusLabel: (value) =>
+        labelByRecord(locale, value, contractStatusLabels),
+      messageStatusLabel: (value) =>
+        labelByRecord(locale, value, messageStatusLabels),
+    }),
+    [locale, onLocaleChange, persistenceAdapter],
+  );
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+export function useI18n() {
+  const context = useContext(I18nContext);
+
+  if (!context) {
+    throw new Error('useI18n deve ser usado dentro de AuraI18nProvider.');
+  }
+
+  return context;
+}

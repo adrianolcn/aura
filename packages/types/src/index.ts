@@ -99,6 +99,7 @@ export const appointmentTypeSchema = z.enum([
   'event',
   'follow_up',
 ]);
+export const supportedLocaleSchema = z.enum(['pt-BR', 'en-US']);
 
 export const authSignInSchema = z.object({
   email: z.string().email(),
@@ -131,6 +132,7 @@ export const professionalSchema = baseEntitySchema.extend({
   whatsappPhoneNumberId: z.string().min(3).optional(),
   whatsappBusinessAccountId: z.string().min(3).optional(),
   email: z.string().email(),
+  locale: supportedLocaleSchema.default('pt-BR'),
   timezone: z.string().default('America/Sao_Paulo'),
   planTier: z.string().default('mvp'),
 });
@@ -538,6 +540,7 @@ export const customerScoreSchema = tenantEntitySchema.extend({
 });
 
 export type Professional = z.infer<typeof professionalSchema>;
+export type SupportedLocale = z.infer<typeof supportedLocaleSchema>;
 export type AuthSignInInput = z.infer<typeof authSignInSchema>;
 export type AuthSignUpInput = z.infer<typeof authSignUpSchema>;
 export type Client = z.infer<typeof clientSchema>;

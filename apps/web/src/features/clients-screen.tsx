@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 
-import { formatDate, formatPhone, toUserMessage, upsertClient, useClients } from '@aura/core';
+import { formatPhone, toUserMessage, upsertClient, useClients, useI18n } from '@aura/core';
 import { clientInputSchema, type ClientInput } from '@aura/types';
 import { Badge, Button, EmptyState, PageHeader, SectionCard } from '@aura/ui';
 
@@ -22,6 +22,7 @@ const initialForm: ClientInput = {
 
 export function ClientsScreen() {
   const auth = useAuth();
+  const { t, formatDate, lifecycleStageLabel } = useI18n();
   const [search, setSearch] = useState('');
   const [lifecycleStage, setLifecycleStage] = useState<'all' | ClientInput['lifecycleStage']>('all');
   const [orderBy, setOrderBy] = useState<'updatedAt' | 'createdAt' | 'priorityScore'>('updatedAt');
@@ -37,25 +38,25 @@ export function ClientsScreen() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   if (auth.loading || loading) {
-    return <LoadingBlock title="Clientes" />;
+    return <LoadingBlock title={t('nav.clients')} />;
   }
 
   if (error || !data) {
-    return <ErrorBlock message={error ?? 'Sem clientes disponíveis.'} />;
+    return <ErrorBlock message={error ?? t('clients.emptyDescription')} />;
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="CRM"
-        title="Clientes e relacionamento"
-        description="Cadastro centralizado com foco em telefone como identificador operacional, histórico por evento e priorização comercial."
-        actions={<Button href="/dashboard">Voltar ao dashboard</Button>}
+        eyebrow={t('clients.eyebrow')}
+        title={t('clients.title')}
+        description={t('clients.description')}
+        actions={<Button href="/dashboard">{t('common.backToDashboard')}</Button>}
       />
 
       <SectionCard
-        title="Nova cliente"
-        description="Cadastro persistido no Supabase com segregação por profissional via RLS."
+        title={t('clients.new')}
+        description={t('clients.newDescription')}
       >
         <form
           className="grid gap-4 md:grid-cols-2"
@@ -73,7 +74,7 @@ export function ClientsScreen() {
               const payload = clientInputSchema.parse(form);
               await upsertClient(auth.client, payload);
               setForm(initialForm);
-              setSuccessMessage('Cliente cadastrada com sucesso.');
+              setSuccessMessage(t('clients.saved'));
               reload();
             } catch (reason) {
               setFormError(toUserMessage(reason, 'Não foi possível salvar a cliente.'));
@@ -82,21 +83,21 @@ export function ClientsScreen() {
             }
           }}
         >
-          <Field label="Nome completo">
+          <Field label={t('clients.fullName')}>
             <input
               value={form.fullName}
               onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
               className={inputClassName}
             />
           </Field>
-          <Field label="Telefone">
+          <Field label={t('auth.phone')}>
             <input
               value={form.phone}
               onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
               className={inputClassName}
             />
           </Field>
-          <Field label="Email">
+          <Field label={t('auth.email')}>
             <input
               type="email"
               value={form.email ?? ''}
@@ -104,21 +105,21 @@ export function ClientsScreen() {
               className={inputClassName}
             />
           </Field>
-          <Field label="Cidade">
+          <Field label={t('clients.city')}>
             <input
               value={form.city ?? ''}
               onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))}
               className={inputClassName}
             />
           </Field>
-          <Field label="Instagram">
+          <Field label={t('clients.instagram')}>
             <input
               value={form.instagramHandle ?? ''}
               onChange={(event) => setForm((current) => ({ ...current, instagramHandle: event.target.value }))}
               className={inputClassName}
             />
           </Field>
-          <Field label="Etapa">
+          <Field label={t('clients.lifecycleStage')}>
             <select
               value={form.lifecycleStage}
               onChange={(event) =>
@@ -128,12 +129,12 @@ export function ClientsScreen() {
             >
               {['lead', 'qualified', 'proposal', 'confirmed', 'archived'].map((stage) => (
                 <option key={stage} value={stage}>
-                  {stage}
+                  {lifecycleStageLabel(stage as ClientInput['lifecycleStage'])}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Score de prioridade">
+          <Field label={t('clients.priorityScore')}>
             <input
               type="number"
               min={0}
@@ -145,7 +146,7 @@ export function ClientsScreen() {
               className={inputClassName}
             />
           </Field>
-          <Field label="Observações" className="md:col-span-2">
+          <Field label={t('clients.notes')} className="md:col-span-2">
             <textarea
               value={form.notes ?? ''}
               onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
@@ -170,27 +171,27 @@ export function ClientsScreen() {
               disabled={saving}
               className="rounded-full bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-60"
             >
-              {saving ? 'Salvando...' : 'Cadastrar cliente'}
+              {saving ? t('common.processing') : t('clients.save')}
             </button>
           </div>
         </form>
       </SectionCard>
 
       <SectionCard
-        title="Pipeline de clientes"
-        description="Clientes persistidos com acesso ao detalhe operacional completo."
+        title={t('clients.pipelineTitle')}
+        description={t('clients.pipelineDescription')}
       >
         <div className="mb-4 grid gap-3 md:grid-cols-[1.4fr,0.9fr,0.9fr]">
-          <Field label="Buscar por nome ou telefone">
+          <Field label={t('clients.search')}>
             <input
               data-testid="clients-search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className={inputClassName}
-              placeholder="Ex.: Ana ou 71 99999-0000"
+              placeholder={t('clients.searchPlaceholder')}
             />
           </Field>
-          <Field label="Etapa">
+          <Field label={t('clients.lifecycleStage')}>
             <select
               value={lifecycleStage}
               onChange={(event) =>
@@ -198,15 +199,15 @@ export function ClientsScreen() {
               }
               className={inputClassName}
             >
-              <option value="all">Todas</option>
+              <option value="all">{t('common.all')}</option>
               {['lead', 'qualified', 'proposal', 'confirmed', 'archived'].map((stage) => (
                 <option key={stage} value={stage}>
-                  {stage}
+                  {lifecycleStageLabel(stage as ClientInput['lifecycleStage'])}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Ordenar por">
+          <Field label={t('clients.orderBy')}>
             <select
               value={orderBy}
               onChange={(event) =>
@@ -214,26 +215,26 @@ export function ClientsScreen() {
               }
               className={inputClassName}
             >
-              <option value="updatedAt">Atualização recente</option>
-              <option value="createdAt">Cadastro recente</option>
-              <option value="priorityScore">Maior prioridade</option>
+              <option value="updatedAt">{t('clients.order.updatedAt')}</option>
+              <option value="createdAt">{t('clients.order.createdAt')}</option>
+              <option value="priorityScore">{t('clients.order.priorityScore')}</option>
             </select>
           </Field>
         </div>
 
         {!data.length ? (
           <EmptyState
-            title="Nenhuma cliente encontrada"
-            description="Ajuste os filtros ou cadastre a primeira cliente para começar a operar o CRM."
+            title={t('clients.emptyTitle')}
+            description={t('clients.emptyDescription')}
           />
         ) : (
           <div className="overflow-hidden rounded-[1.25rem] border border-stone-200">
           <div className="hidden grid-cols-[1.3fr,1fr,0.8fr,0.9fr,0.7fr] gap-3 bg-stone-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-stone-500 md:grid">
-            <span>Cliente</span>
-            <span>Contato</span>
-            <span>Etapa</span>
-            <span>Score</span>
-            <span>Desde</span>
+            <span>{t('clients.table.client')}</span>
+            <span>{t('clients.table.contact')}</span>
+            <span>{t('clients.table.stage')}</span>
+            <span>{t('clients.table.score')}</span>
+            <span>{t('clients.table.since')}</span>
           </div>
 
           <div className="divide-y divide-stone-200">
@@ -246,15 +247,15 @@ export function ClientsScreen() {
               >
                 <div>
                   <p className="font-semibold text-stone-950">{client.fullName}</p>
-                  <p className="mt-1 text-sm text-stone-600">{client.city ?? 'Cidade não informada'}</p>
+                  <p className="mt-1 text-sm text-stone-600">{client.city ?? t('common.notInformed')}</p>
                 </div>
                 <div className="text-sm text-stone-600">
                   <p>{formatPhone(client.phone)}</p>
-                  <p className="mt-1">{client.email ?? 'Sem email'}</p>
+                  <p className="mt-1">{client.email ?? t('common.noEmail')}</p>
                 </div>
                 <div>
                   <Badge tone={client.lifecycleStage === 'confirmed' ? 'success' : 'info'}>
-                    {client.lifecycleStage}
+                    {lifecycleStageLabel(client.lifecycleStage)}
                   </Badge>
                 </div>
                 <div className="text-sm font-semibold text-stone-950">

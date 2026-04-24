@@ -3,6 +3,7 @@
 ## Arquivos
 
 - [playwright.config.ts](C:/dev/aura/playwright.config.ts)
+- [e2e/auth.setup.ts](C:/dev/aura/e2e/auth.setup.ts)
 - [e2e/web-inbox.spec.ts](C:/dev/aura/e2e/web-inbox.spec.ts)
 - [/.github/workflows/e2e.yml](C:/dev/aura/.github/workflows/e2e.yml)
 - [/.github/workflows/staging-validation.yml](C:/dev/aura/.github/workflows/staging-validation.yml)
@@ -24,6 +25,13 @@ Opcionais:
 ```bash
 corepack pnpm test:e2e
 ```
+
+## Estratégia de estabilidade
+
+- autenticação reaproveitada com `storageState`
+- projeto de setup dedicado em `auth.setup.ts`
+- execução serializada por padrão
+- foco em robustez do fluxo principal antes de paralelismo
 
 ## Cobertura
 

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import { formatDateTime, useAppointments } from '@aura/core';
+import { useAppointments, useI18n } from '@aura/core';
 import { Badge, PageHeader, SectionCard } from '@aura/ui';
 
 import { useAuth } from '@/components/auth-provider';
@@ -10,6 +10,7 @@ import { ErrorBlock, LoadingBlock } from '@/components/resource-state';
 
 export function AgendaScreen() {
   const auth = useAuth();
+  const { t, formatDateTime, appointmentStatusLabel } = useI18n();
   const [status, setStatus] = useState<'all' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'>('all');
   const [period, setPeriod] = useState<'today' | 'next7' | 'all'>('today');
   const range = useMemo(() => {
@@ -47,28 +48,28 @@ export function AgendaScreen() {
   });
 
   if (auth.loading || loading) {
-    return <LoadingBlock title="Agenda" />;
+    return <LoadingBlock title={t('nav.agenda')} />;
   }
 
   if (error || !data) {
-    return <ErrorBlock message={error ?? 'Sem agendamentos disponíveis.'} />;
+    return <ErrorBlock message={error ?? t('agenda.emptyDescription')} />;
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Agenda"
-        title="Visão de compromissos"
-        description="Base inicial para agenda, conflitos e evolução futura com confirmação automática e lembretes."
+        eyebrow={t('agenda.eyebrow')}
+        title={t('agenda.title')}
+        description={t('agenda.description')}
       />
 
       <SectionCard
-        title="Agenda operacional"
-        description="Próximos compromissos organizados por status e janela horária."
+        title={t('agenda.cardTitle')}
+        description={t('agenda.cardDescription')}
       >
         <div className="mb-4 grid gap-3 md:grid-cols-2">
           <label className="space-y-2 text-sm text-stone-600">
-            <span>Status</span>
+            <span>{t('agenda.status')}</span>
             <select
               value={status}
               onChange={(event) =>
@@ -84,31 +85,31 @@ export function AgendaScreen() {
               }
               className="w-full rounded-2xl border border-stone-200 px-4 py-3 outline-none transition focus:border-stone-950"
             >
-              <option value="all">Todos</option>
+              <option value="all">{t('common.all')}</option>
               {['scheduled', 'confirmed', 'completed', 'cancelled', 'no_show'].map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {appointmentStatusLabel(item as 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show')}
                 </option>
               ))}
             </select>
           </label>
           <label className="space-y-2 text-sm text-stone-600">
-            <span>Período</span>
+            <span>{t('agenda.period')}</span>
             <select
               value={period}
               onChange={(event) => setPeriod(event.target.value as 'today' | 'next7' | 'all')}
               className="w-full rounded-2xl border border-stone-200 px-4 py-3 outline-none transition focus:border-stone-950"
             >
-              <option value="today">Hoje</option>
-              <option value="next7">Próximos 7 dias</option>
-              <option value="all">Tudo</option>
+              <option value="today">{t('agenda.period.today')}</option>
+              <option value="next7">{t('agenda.period.next7')}</option>
+              <option value="all">{t('agenda.period.all')}</option>
             </select>
           </label>
         </div>
 
         {!data.length ? (
           <div className="rounded-[1.5rem] border border-dashed border-stone-300 bg-stone-50 p-6 text-sm text-stone-600">
-            Nenhum compromisso encontrado para o período e status selecionados.
+            {t('agenda.emptyDescription')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -117,17 +118,17 @@ export function AgendaScreen() {
               key={appointment.id}
               className="flex flex-col gap-3 rounded-[1.25rem] border border-stone-200 p-4 md:flex-row md:items-center md:justify-between"
             >
-              <div>
-                <p className="font-semibold text-stone-950">{appointment.title}</p>
-                <p className="mt-1 text-sm text-stone-600">
-                  {formatDateTime(appointment.startsAt)} até {formatDateTime(appointment.endsAt)}
-                </p>
-                <p className="mt-1 text-sm text-stone-500">{appointment.location ?? 'Sem local informado'}</p>
+                <div>
+                  <p className="font-semibold text-stone-950">{appointment.title}</p>
+                  <p className="mt-1 text-sm text-stone-600">
+                    {formatDateTime(appointment.startsAt)} - {formatDateTime(appointment.endsAt)}
+                  </p>
+                  <p className="mt-1 text-sm text-stone-500">{appointment.location ?? t('common.notInformed')}</p>
+                </div>
+                <Badge tone={appointment.status === 'confirmed' ? 'success' : 'info'}>
+                  {appointmentStatusLabel(appointment.status)}
+                </Badge>
               </div>
-              <Badge tone={appointment.status === 'confirmed' ? 'success' : 'info'}>
-                {appointment.status}
-              </Badge>
-            </div>
           ))}
           </div>
         )}

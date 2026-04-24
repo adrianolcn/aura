@@ -12,17 +12,8 @@ test.describe('AURA web inbox flow', () => {
   );
 
   test('authenticates and opens the client inbox flow', async ({ page }) => {
-    await page.goto('/login');
-
-    await page.getByTestId('sign-in-email').fill(process.env.E2E_USER_EMAIL ?? '');
-    await page
-      .getByTestId('sign-in-password')
-      .fill(process.env.E2E_USER_PASSWORD ?? '');
-    await page.getByTestId('auth-submit').click();
-
-    await expect(page).toHaveURL(/dashboard/);
-
     await page.goto('/clients');
+    await expect(page).toHaveURL(/clients/);
 
     if (e2eClientName) {
       await page.getByTestId('clients-search').fill(e2eClientName);

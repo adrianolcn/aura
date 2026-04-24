@@ -13,6 +13,8 @@ Fechar a transição de staging para piloto assistido com checklist verificável
 - scheduler executado
 - erros indo para observabilidade externa
 - E2E e integração sem regressão
+- mobile validado em simulador/dispositivo
+- seletor de idioma funcionando em web e mobile
 
 ## Bloqueios desta execução
 

@@ -113,6 +113,8 @@ Secrets e envs hoje esperados:
 - [ ] README atualizado
 - [ ] docs de WhatsApp, automações, E2E e validação integrada revisadas
 - [ ] docs de staging, piloto e incidentes revisadas
+- [ ] docs de i18n, arquitetura e workflow de desenvolvimento revisadas quando impactadas
 - [ ] `docs/release-checklist.md` revisado se o fluxo mudou
 - [ ] `.github/pull_request_template.md` continua adequado
+- [ ] decisão de polling vs realtime continua válida para o estágio atual
 - [ ] pendências e riscos conhecidos estão documentados

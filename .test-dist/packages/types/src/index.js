@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.notificationLogSchema = exports.messageTemplateSchema = exports.automationRuleSchema = exports.messageSchema = exports.conversationSchema = exports.mediaUploadInputSchema = exports.noteInputSchema = exports.contractsQuerySchema = exports.budgetsQuerySchema = exports.appointmentsQuerySchema = exports.clientsQuerySchema = exports.contractStatusUpdateSchema = exports.contractInputSchema = exports.budgetInputSchema = exports.budgetItemInputSchema = exports.appointmentInputSchema = exports.clientEventInputSchema = exports.clientInputSchema = exports.clientDocumentSchema = exports.contractVersionSchema = exports.contractSchema = exports.appointmentSchema = exports.budgetItemSchema = exports.budgetSchema = exports.serviceSchema = exports.clientMediaSchema = exports.clientNoteSchema = exports.clientEventSchema = exports.clientSchema = exports.professionalSchema = exports.authSignUpSchema = exports.authSignInSchema = exports.appointmentTypeSchema = exports.clientEventStatusSchema = exports.clientLifecycleStageSchema = exports.documentTypeSchema = exports.mediaTypeSchema = exports.automationExecutionKindSchema = exports.automationTriggerSchema = exports.messageTemplateCategorySchema = exports.communicationConsentSourceSchema = exports.communicationConsentStatusSchema = exports.messageTypeSchema = exports.messageStatusSchema = exports.conversationStatusSchema = exports.messageChannelSchema = exports.messageDirectionSchema = exports.contractStatusSchema = exports.appointmentStatusSchema = exports.budgetStatusSchema = void 0;
-exports.customerScoreSchema = exports.messageSendInputSchema = exports.automationDispatchRunSchema = exports.integrationLogSchema = exports.messageStatusEventSchema = exports.communicationOptInInputSchema = exports.communicationOptInSchema = void 0;
+exports.messageTemplateSchema = exports.automationRuleSchema = exports.messageSchema = exports.conversationSchema = exports.mediaUploadInputSchema = exports.noteInputSchema = exports.contractsQuerySchema = exports.budgetsQuerySchema = exports.appointmentsQuerySchema = exports.clientsQuerySchema = exports.contractStatusUpdateSchema = exports.contractInputSchema = exports.budgetInputSchema = exports.budgetItemInputSchema = exports.appointmentInputSchema = exports.clientEventInputSchema = exports.clientInputSchema = exports.clientDocumentSchema = exports.contractVersionSchema = exports.contractSchema = exports.appointmentSchema = exports.budgetItemSchema = exports.budgetSchema = exports.serviceSchema = exports.clientMediaSchema = exports.clientNoteSchema = exports.clientEventSchema = exports.clientSchema = exports.professionalSchema = exports.authSignUpSchema = exports.authSignInSchema = exports.supportedLocaleSchema = exports.appointmentTypeSchema = exports.clientEventStatusSchema = exports.clientLifecycleStageSchema = exports.documentTypeSchema = exports.mediaTypeSchema = exports.automationExecutionKindSchema = exports.automationTriggerSchema = exports.messageTemplateCategorySchema = exports.communicationConsentSourceSchema = exports.communicationConsentStatusSchema = exports.messageTypeSchema = exports.messageStatusSchema = exports.conversationStatusSchema = exports.messageChannelSchema = exports.messageDirectionSchema = exports.contractStatusSchema = exports.appointmentStatusSchema = exports.budgetStatusSchema = void 0;
+exports.customerScoreSchema = exports.messageSendInputSchema = exports.automationDispatchRunSchema = exports.integrationLogSchema = exports.messageStatusEventSchema = exports.communicationOptInInputSchema = exports.communicationOptInSchema = exports.notificationLogSchema = void 0;
 const zod_1 = require("zod");
 exports.budgetStatusSchema = zod_1.z.enum([
     'draft',
@@ -102,6 +102,7 @@ exports.appointmentTypeSchema = zod_1.z.enum([
     'event',
     'follow_up',
 ]);
+exports.supportedLocaleSchema = zod_1.z.enum(['pt-BR', 'en-US']);
 exports.authSignInSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
     password: zod_1.z.string().min(6),
@@ -129,6 +130,7 @@ exports.professionalSchema = baseEntitySchema.extend({
     whatsappPhoneNumberId: zod_1.z.string().min(3).optional(),
     whatsappBusinessAccountId: zod_1.z.string().min(3).optional(),
     email: zod_1.z.string().email(),
+    locale: exports.supportedLocaleSchema.default('pt-BR'),
     timezone: zod_1.z.string().default('America/Sao_Paulo'),
     planTier: zod_1.z.string().default('mvp'),
 });

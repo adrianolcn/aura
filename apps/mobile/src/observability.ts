@@ -17,7 +17,6 @@ export function initializeMobileObservability() {
         ? 'sentry'
         : 'http',
     endpoint: process.env.EXPO_PUBLIC_OBSERVABILITY_ENDPOINT,
-    authToken: process.env.EXPO_PUBLIC_OBSERVABILITY_AUTH_TOKEN,
     sentryDsn: process.env.EXPO_PUBLIC_OBSERVABILITY_SENTRY_DSN,
     environment: process.env.EXPO_PUBLIC_APP_ENV ?? 'local',
     release: process.env.EXPO_PUBLIC_RELEASE_VERSION ?? 'dev',

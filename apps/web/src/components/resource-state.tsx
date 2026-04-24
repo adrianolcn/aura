@@ -1,10 +1,13 @@
 import type { PropsWithChildren } from 'react';
 
+import { useI18n } from '@aura/core';
 import { EmptyState, SectionCard } from '@aura/ui';
 
 export function LoadingBlock({ title }: { title: string }) {
+  const { t } = useI18n();
+
   return (
-    <SectionCard title={title} description="Carregando dados do workspace.">
+    <SectionCard title={title} description={t('resource.loadingDescription')}>
       <div className="grid gap-3 md:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
           <div
@@ -18,9 +21,11 @@ export function LoadingBlock({ title }: { title: string }) {
 }
 
 export function ErrorBlock({ message }: { message: string }) {
+  const { t } = useI18n();
+
   return (
     <EmptyState
-      title="Não foi possível carregar os dados"
+      title={t('resource.errorTitle')}
       description={message}
     />
   );

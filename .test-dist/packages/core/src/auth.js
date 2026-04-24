@@ -5,6 +5,7 @@ exports.signUpWithPassword = signUpWithPassword;
 exports.signOut = signOut;
 exports.getAuthState = getAuthState;
 exports.getCurrentProfessional = getCurrentProfessional;
+exports.updateProfessionalLocale = updateProfessionalLocale;
 const types_1 = require("@aura/types");
 function mapProfessional(row) {
     return {
@@ -21,6 +22,7 @@ function mapProfessional(row) {
             ? String(row.whatsapp_business_account_id)
             : undefined,
         email: String(row.email),
+        locale: types_1.supportedLocaleSchema.parse(row.locale ?? 'pt-BR'),
         timezone: String(row.timezone ?? 'America/Sao_Paulo'),
         planTier: String(row.plan_tier ?? 'mvp'),
         createdAt: String(row.created_at),
@@ -92,4 +94,24 @@ async function getCurrentProfessional(client) {
         throw new Error(response.error.message);
     }
     return response.data ? mapProfessional(response.data) : null;
+}
+async function updateProfessionalLocale(client, locale) {
+    const payload = types_1.supportedLocaleSchema.parse(locale);
+    const userResponse = await client.auth.getUser();
+    if (userResponse.error) {
+        throw new Error(userResponse.error.message);
+    }
+    const user = userResponse.data.user;
+    if (!user) {
+        throw new Error('Usuária autenticada não encontrada.');
+    }
+    const response = await client
+        .from('professionals')
+        .update({
+        locale: payload,
+    })
+        .eq('auth_user_id', user.id);
+    if (response.error) {
+        throw new Error(response.error.message);
+    }
 }

@@ -18,6 +18,7 @@ __exportStar(require("./auth"), exports);
 __exportStar(require("./communications"), exports);
 __exportStar(require("./errors"), exports);
 __exportStar(require("./formatters"), exports);
+__exportStar(require("./i18n"), exports);
 __exportStar(require("./mock"), exports);
 __exportStar(require("./observability"), exports);
 __exportStar(require("./services"), exports);

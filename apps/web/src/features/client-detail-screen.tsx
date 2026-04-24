@@ -17,9 +17,6 @@ import {
   deleteClientMedia,
   deleteContract,
   deleteEvent,
-  formatCurrency,
-  formatDate,
-  formatDateTime,
   formatFileSize,
   sendClientMessage,
   toUserMessage,
@@ -34,6 +31,7 @@ import {
   upsertBudget,
   upsertClient,
   upsertEvent,
+  useI18n,
   useClientWorkspaceSnapshot,
 } from '@aura/core';
 import type {
@@ -61,6 +59,17 @@ const emptyBudgetItem = { description: '', quantity: 1, unitPrice: 0 };
 export function ClientDetailScreen({ clientId }: { clientId: string }) {
   const auth = useAuth();
   const router = useRouter();
+  const {
+    t,
+    formatDateTime,
+    eventStatusLabel,
+    appointmentStatusLabel,
+    appointmentTypeLabel,
+    budgetStatusLabel,
+    contractStatusLabel,
+    lifecycleStageLabel,
+    messageStatusLabel,
+  } = useI18n();
   const { data, loading, error, reload } = useClientWorkspaceSnapshot(auth.client, clientId, {
     refreshIntervalMs: 15000,
   });
@@ -167,7 +176,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
         id: event.id,
         label: `${event.title} • ${formatDateTime(event.eventDate)}`,
       })) ?? [],
-    [data?.events],
+    [data?.events, formatDateTime],
   );
   const selectedTemplate = useMemo(
     () => communicationData?.templates.find((template) => template.id === selectedTemplateId),
@@ -205,17 +214,17 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
 
     try {
       await task();
-      setStatusMessage('Alterações salvas com sucesso.');
+      setStatusMessage(t('clientDetail.success.saved'));
       await Promise.all([reload(), reloadCommunication()]);
     } catch (reason) {
-      setFormError(toUserMessage(reason, 'Não foi possível concluir a ação.'));
+      setFormError(toUserMessage(reason, t('clientDetail.error.actionFailed')));
     } finally {
       setBusyAction(null);
     }
   };
 
   if (auth.loading || loading || communicationLoading) {
-    return <LoadingBlock title="Detalhe da cliente" />;
+    return <LoadingBlock title={t('nav.clients')} />;
   }
 
   if (
@@ -229,21 +238,23 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
     !budgetForm ||
     !contractForm
   ) {
-    return <ErrorBlock message={error ?? communicationError ?? 'Cliente não encontrada.'} />;
+    return <ErrorBlock message={error ?? communicationError ?? t('clientDetail.error.notFound')} />;
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Cliente"
+        eyebrow={t('nav.clients')}
         title={data.client.fullName}
         data-testid="client-detail-title"
-        description={`${data.client.phone} • ${data.client.email ?? 'Sem email'} • ${data.client.city ?? 'Sem cidade'} • score operacional ${data.client.priorityScore}/100.`}
+        description={`${data.client.phone} • ${data.client.email ?? t('common.noEmail')} • ${data.client.city ?? t('common.notInformed')} • ${t('clientDetail.header.description', {
+          score: String(data.client.priorityScore),
+        })}`}
         actions={
           <>
-            <Button href="/clients">Voltar para clientes</Button>
+            <Button href="/clients">{t('common.backToClients')}</Button>
             <Button href="/agenda" tone="secondary">
-              Agenda consolidada
+              {t('nav.agenda')}
             </Button>
           </>
         }
@@ -257,14 +268,22 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Eventos" value={String(data.events.length)} helper="Eventos persistidos por cliente." />
-        <StatCard label="Orçamentos" value={String(data.budgets.length)} helper="Propostas reais por evento." />
-        <StatCard label="Contratos" value={String(data.contracts.length)} helper="PDFs armazenados no Storage." />
-        <StatCard label="Prioridade" value={`${data.score?.priorityScore ?? data.client.priorityScore}`} helper="Score operacional atual." />
+        <StatCard label={t('clientDetail.stats.eventsLabel')} value={String(data.events.length)} helper={t('clientDetail.stats.eventsHelper')} />
+        <StatCard label={t('nav.budgets')} value={String(data.budgets.length)} helper={t('clientDetail.stats.budgetsHelper')} />
+        <StatCard label={t('nav.contracts')} value={String(data.contracts.length)} helper={t('clientDetail.stats.contractsHelper')} />
+        <StatCard label={t('clients.priorityScore')} value={`${data.score?.priorityScore ?? data.client.priorityScore}`} helper={t('clientDetail.stats.priorityHelper')} />
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {['Resumo', 'Timeline', 'Inspirações / arquivos', 'Orçamentos', 'Agenda', 'Contratos', 'Conversa'].map((section) => (
+        {[
+          t('clientDetail.summary.title'),
+          t('clientDetail.timeline.title'),
+          t('clientDetail.assets.title'),
+          t('nav.budgets'),
+          t('nav.agenda'),
+          t('nav.contracts'),
+          t('clientDetail.inbox.title'),
+        ].map((section) => (
           <span key={section} className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-700">
             {section}
           </span>
@@ -272,7 +291,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
-        <SectionCard title="Resumo" description="Dados da cliente com edição e remoção reais.">
+        <SectionCard title={t('clientDetail.summary.title')} description={t('clientDetail.summary.description')}>
           <form
             className="grid gap-4 md:grid-cols-2"
             onSubmit={async (event) => {
@@ -286,21 +305,21 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
               });
             }}
           >
-            <Field label="Nome completo">
+            <Field label={t('clients.fullName')}>
               <input
                 value={clientForm.fullName}
                 onChange={(event) => setClientForm((current) => ({ ...(current as ClientInput), fullName: event.target.value }))}
                 className={inputClassName}
               />
             </Field>
-            <Field label="Telefone">
+            <Field label={t('clients.phone')}>
               <input
                 value={clientForm.phone}
                 onChange={(event) => setClientForm((current) => ({ ...(current as ClientInput), phone: event.target.value }))}
                 className={inputClassName}
               />
             </Field>
-            <Field label="Email">
+            <Field label={t('clients.email')}>
               <input
                 type="email"
                 value={clientForm.email ?? ''}
@@ -308,21 +327,21 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                 className={inputClassName}
               />
             </Field>
-            <Field label="Cidade">
+            <Field label={t('clients.city')}>
               <input
                 value={clientForm.city ?? ''}
                 onChange={(event) => setClientForm((current) => ({ ...(current as ClientInput), city: event.target.value }))}
                 className={inputClassName}
               />
             </Field>
-            <Field label="Instagram">
+            <Field label={t('clients.instagram')}>
               <input
                 value={clientForm.instagramHandle ?? ''}
                 onChange={(event) => setClientForm((current) => ({ ...(current as ClientInput), instagramHandle: event.target.value }))}
                 className={inputClassName}
               />
             </Field>
-            <Field label="Etapa">
+            <Field label={t('clients.stage')}>
               <select
                 value={clientForm.lifecycleStage}
                 onChange={(event) =>
@@ -335,12 +354,12 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
               >
                 {['lead', 'qualified', 'proposal', 'confirmed', 'archived'].map((stage) => (
                   <option key={stage} value={stage}>
-                    {stage}
+                    {lifecycleStageLabel(stage as ClientInput['lifecycleStage'])}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field label="Score">
+            <Field label={t('clients.priorityScore')}>
               <input
                 type="number"
                 min={0}
@@ -355,7 +374,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                 className={inputClassName}
               />
             </Field>
-            <Field label="Observações" className="md:col-span-2">
+            <Field label={t('clients.notes')} className="md:col-span-2">
               <textarea
                 value={clientForm.notes ?? ''}
                 onChange={(event) => setClientForm((current) => ({ ...(current as ClientInput), notes: event.target.value }))}
@@ -364,14 +383,14 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
             </Field>
             <div className="md:col-span-2 flex flex-wrap gap-3">
               <button type="submit" className={primaryButtonClassName} disabled={busyAction === 'save-client'}>
-                {busyAction === 'save-client' ? 'Salvando...' : 'Salvar cliente'}
+                {busyAction === 'save-client' ? t('common.processing') : t('common.save')}
               </button>
               <button
                 type="button"
                 className={dangerButtonClassName}
                 disabled={busyAction === 'delete-client'}
                 onClick={async () => {
-                  if (!auth.client || !window.confirm('Remover esta cliente e todos os dados relacionados?')) {
+                  if (!auth.client || !window.confirm(t('clientDetail.summary.deleteConfirm'))) {
                     return;
                   }
 
@@ -382,30 +401,36 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                   });
                 }}
               >
-                {busyAction === 'delete-client' ? 'Removendo...' : 'Excluir cliente'}
+                {busyAction === 'delete-client' ? t('common.processing') : t('common.delete')}
               </button>
             </div>
           </form>
         </SectionCard>
 
-        <SectionCard title="Timeline" description="Timeline real derivada de cliente, eventos, uploads, orçamentos, agenda e contratos.">
+        <SectionCard title={t('clientDetail.timeline.title')} description={t('clientDetail.timeline.description')}>
           <div className="space-y-3">
-            {data.timeline.map((item) => (
-              <div key={item.id} className="rounded-[1.25rem] border border-stone-200 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <p className="font-semibold capitalize text-stone-950">{item.title}</p>
-                  <Badge tone="info">{item.kind}</Badge>
+            {data.timeline.length ? (
+              data.timeline.map((item) => (
+                <div key={item.id} className="rounded-[1.25rem] border border-stone-200 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="font-semibold capitalize text-stone-950">{item.title}</p>
+                    <Badge tone="info">{item.kind}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-stone-600">{item.description}</p>
+                  <p className="mt-3 text-xs uppercase tracking-[0.25em] text-stone-400">{formatDateTime(item.happenedAt)}</p>
                 </div>
-                <p className="mt-2 text-sm text-stone-600">{item.description}</p>
-                <p className="mt-3 text-xs uppercase tracking-[0.25em] text-stone-400">{formatDateTime(item.happenedAt)}</p>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="rounded-[1.25rem] border border-dashed border-stone-200 p-4 text-sm text-stone-500">
+                {t('clientDetail.timeline.empty')}
+              </p>
+            )}
           </div>
         </SectionCard>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <SectionCard title="Eventos" description="Criação, atualização e exclusão reais de eventos da cliente.">
+        <SectionCard title={t('clientDetail.events.title')} description={t('clientDetail.events.description')}>
           <form
             className="grid gap-3"
             onSubmit={async (event) => {
@@ -428,35 +453,35 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
               });
             }}
           >
-            <Field label="Título">
+            <Field label={t('common.title')}>
               <input value={eventForm.title} onChange={(event) => setEventForm((current) => ({ ...(current as typeof eventForm), title: event.target.value }))} className={inputClassName} />
             </Field>
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Tipo">
+              <Field label={t('common.type')}>
                 <input value={eventForm.eventType} onChange={(event) => setEventForm((current) => ({ ...(current as typeof eventForm), eventType: event.target.value }))} className={inputClassName} />
               </Field>
               <Field label="Status">
                 <select value={eventForm.status} onChange={(event) => setEventForm((current) => ({ ...(current as typeof eventForm), status: event.target.value as ClientEventInput['status'] }))} className={inputClassName}>
                   {['lead', 'quoted', 'booked', 'completed', 'cancelled'].map((status) => (
-                    <option key={status} value={status}>{status}</option>
+                    <option key={status} value={status}>{eventStatusLabel(status as ClientEventInput['status'])}</option>
                   ))}
                 </select>
               </Field>
             </div>
-            <Field label="Data do evento">
+            <Field label={t('clients.eventDate')}>
               <input type="datetime-local" value={isoToDateTimeLocal(eventForm.eventDate)} onChange={(event) => setEventForm((current) => ({ ...(current as typeof eventForm), eventDate: dateTimeLocalToIso(event.target.value) }))} className={inputClassName} />
             </Field>
-            <Field label="Local">
+            <Field label={t('clients.location')}>
               <input value={eventForm.location ?? ''} onChange={(event) => setEventForm((current) => ({ ...(current as typeof eventForm), location: event.target.value }))} className={inputClassName} />
             </Field>
-            <Field label="Convidadas">
+            <Field label={t('clients.guestCount')}>
               <input type="number" min={0} value={eventForm.guestCount ?? ''} onChange={(event) => setEventForm((current) => ({ ...(current as typeof eventForm), guestCount: event.target.value ? Number(event.target.value) : undefined }))} className={inputClassName} />
             </Field>
-            <Field label="Observações">
+            <Field label={t('clients.notes')}>
               <textarea value={eventForm.notes ?? ''} onChange={(event) => setEventForm((current) => ({ ...(current as typeof eventForm), notes: event.target.value }))} className={`${inputClassName} min-h-24`} />
             </Field>
             <button type="submit" className={primaryButtonClassName} disabled={busyAction === 'create-event'}>
-              {busyAction === 'create-event' ? 'Salvando...' : 'Criar evento'}
+              {busyAction === 'create-event' ? t('common.processing') : t('clientDetail.events.create')}
             </button>
           </form>
 
@@ -483,7 +508,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Inspirações / arquivos" description="Upload real de imagens e PDFs com persistência no Storage.">
+        <SectionCard title={t('clientDetail.assets.title')} description={t('clientDetail.assets.description')}>
           <form
             className="grid gap-3"
             onSubmit={async (event) => {
@@ -493,7 +518,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
               const file = fileInput?.files?.[0];
 
               if (!auth.client || !file) {
-                setFormError('Selecione um arquivo para upload.');
+                setFormError(t('clientDetail.assets.selectFile'));
                 return;
               }
 
@@ -513,13 +538,13 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
               });
             }}
           >
-            <Field label="Vincular ao evento">
+            <Field label={t('common.linkEvent')}>
               <select
                 value={uploadForm.eventId ?? ''}
                 onChange={(event) => setUploadForm((current) => ({ ...current, eventId: event.target.value || undefined }))}
                 className={inputClassName}
               >
-                <option value="">Sem evento específico</option>
+                <option value="">{t('common.noSpecificEvent')}</option>
                 {eventOptions.map((event) => (
                   <option key={event.id} value={event.id}>
                     {event.label}
@@ -527,14 +552,14 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                 ))}
               </select>
             </Field>
-            <Field label="Legenda">
+            <Field label={t('common.caption')}>
               <input value={uploadForm.caption} onChange={(event) => setUploadForm((current) => ({ ...current, caption: event.target.value }))} className={inputClassName} />
             </Field>
-            <Field label="Arquivo">
+            <Field label={t('common.file')}>
               <input name="asset" type="file" accept="image/*,.pdf" className={inputClassName} />
             </Field>
             <button type="submit" className={primaryButtonClassName} disabled={busyAction === 'upload-asset'}>
-              {busyAction === 'upload-asset' ? 'Enviando...' : 'Enviar arquivo'}
+              {busyAction === 'upload-asset' ? t('common.processing') : t('clientDetail.assets.upload')}
             </button>
           </form>
 
@@ -544,13 +569,13 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                 key={media.id}
                 client={auth.client}
                 title={media.fileName}
-                description={`${media.caption ?? 'Sem legenda'} • ${media.mimeType} • ${formatFileSize(media.sizeBytes)}`}
+                description={`${media.caption ?? t('clientDetail.assets.noCaption')} • ${media.mimeType} • ${formatFileSize(media.sizeBytes)}`}
                 badge={media.mediaType}
                 bucket="client-media"
                 path={media.storagePath}
                 previewImage
                 onOpen={async () => {
-                  await openStorageFile('client-media', media.storagePath, 'Imagem aberta em nova guia.');
+                  await openStorageFile('client-media', media.storagePath, t('clientDetail.assets.openImage'));
                 }}
                 onDelete={async () => {
                   if (!auth.client) return;
@@ -572,7 +597,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                 bucket="documents"
                 path={document.storagePath}
                 onOpen={async () => {
-                  await openStorageFile('documents', document.storagePath, 'Arquivo aberto em nova guia.');
+                  await openStorageFile('documents', document.storagePath, t('clientDetail.assets.openFile'));
                 }}
                 onDelete={async () => {
                   if (!auth.client) return;
@@ -585,7 +610,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Agenda" description="Agendamentos reais vinculados à cliente e opcionalmente ao evento.">
+        <SectionCard title={t('clientDetail.agenda.title')} description={t('clientDetail.agenda.description')}>
           <form
             className="grid gap-3"
             onSubmit={async (event) => {
@@ -604,49 +629,49 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
               });
             }}
           >
-            <Field label="Título">
+            <Field label={t('common.title')}>
               <input value={appointmentForm.title} onChange={(event) => setAppointmentForm((current) => ({ ...(current as typeof appointmentForm), title: event.target.value }))} className={inputClassName} />
             </Field>
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Tipo">
+              <Field label={t('common.type')}>
                 <select value={appointmentForm.appointmentType} onChange={(event) => setAppointmentForm((current) => ({ ...(current as typeof appointmentForm), appointmentType: event.target.value as AppointmentInput['appointmentType'] }))} className={inputClassName}>
                   {['consultation', 'trial', 'event', 'follow_up'].map((type) => (
-                    <option key={type} value={type}>{type}</option>
+                    <option key={type} value={type}>{appointmentTypeLabel(type as AppointmentInput['appointmentType'])}</option>
                   ))}
                 </select>
               </Field>
-              <Field label="Status">
+              <Field label={t('common.status')}>
                 <select value={appointmentForm.status} onChange={(event) => setAppointmentForm((current) => ({ ...(current as typeof appointmentForm), status: event.target.value as AppointmentInput['status'] }))} className={inputClassName}>
                   {['scheduled', 'confirmed', 'completed', 'cancelled', 'no_show'].map((status) => (
-                    <option key={status} value={status}>{status}</option>
+                    <option key={status} value={status}>{appointmentStatusLabel(status as AppointmentInput['status'])}</option>
                   ))}
                 </select>
               </Field>
             </div>
-            <Field label="Evento relacionado">
+            <Field label={t('common.event')}>
               <select value={appointmentForm.eventId ?? ''} onChange={(event) => setAppointmentForm((current) => ({ ...(current as typeof appointmentForm), eventId: event.target.value || undefined }))} className={inputClassName}>
-                <option value="">Sem evento específico</option>
+                <option value="">{t('common.noSpecificEvent')}</option>
                 {eventOptions.map((event) => (
                   <option key={event.id} value={event.id}>{event.label}</option>
                 ))}
               </select>
             </Field>
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Início">
+              <Field label={t('common.start')}>
                 <input type="datetime-local" value={isoToDateTimeLocal(appointmentForm.startsAt)} onChange={(event) => setAppointmentForm((current) => ({ ...(current as typeof appointmentForm), startsAt: dateTimeLocalToIso(event.target.value) }))} className={inputClassName} />
               </Field>
-              <Field label="Fim">
+              <Field label={t('common.end')}>
                 <input type="datetime-local" value={isoToDateTimeLocal(appointmentForm.endsAt)} onChange={(event) => setAppointmentForm((current) => ({ ...(current as typeof appointmentForm), endsAt: dateTimeLocalToIso(event.target.value) }))} className={inputClassName} />
               </Field>
             </div>
-            <Field label="Local">
+            <Field label={t('clients.location')}>
               <input value={appointmentForm.location ?? ''} onChange={(event) => setAppointmentForm((current) => ({ ...(current as typeof appointmentForm), location: event.target.value }))} className={inputClassName} />
             </Field>
-            <Field label="Observações">
+            <Field label={t('clients.notes')}>
               <textarea value={appointmentForm.notes ?? ''} onChange={(event) => setAppointmentForm((current) => ({ ...(current as typeof appointmentForm), notes: event.target.value }))} className={`${inputClassName} min-h-24`} />
             </Field>
             <button type="submit" className={primaryButtonClassName} disabled={busyAction === 'create-appointment'}>
-              {busyAction === 'create-appointment' ? 'Salvando...' : 'Criar agendamento'}
+              {busyAction === 'create-appointment' ? t('common.processing') : t('clientDetail.agenda.create')}
             </button>
           </form>
 
@@ -657,11 +682,11 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                   <div>
                     <p className="font-semibold text-stone-950">{appointment.title}</p>
                     <p className="mt-1 text-sm text-stone-600">
-                      {formatDateTime(appointment.startsAt)} • {appointment.location ?? 'Sem local'}
+                      {formatDateTime(appointment.startsAt)} • {appointment.location ?? t('common.notInformed')}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge tone={appointment.status === 'confirmed' ? 'success' : 'info'}>{appointment.status}</Badge>
+                    <Badge tone={appointment.status === 'confirmed' ? 'success' : 'info'}>{appointmentStatusLabel(appointment.status)}</Badge>
                     <button
                       type="button"
                       className={dangerTextButtonClassName}
@@ -681,7 +706,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Orçamentos" description="CRUD real de orçamentos com itens persistidos por evento.">
+        <SectionCard title={t('clientDetail.budgets.title')} description={t('clientDetail.budgets.description')}>
           <form
             className="grid gap-3"
             onSubmit={async (event) => {
@@ -700,49 +725,49 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
               });
             }}
           >
-            <Field label="Evento">
+            <Field label={t('common.event')}>
               <select value={budgetForm.eventId} onChange={(event) => setBudgetForm((current) => ({ ...(current as typeof budgetForm), eventId: event.target.value }))} className={inputClassName}>
-                <option value="">Selecione</option>
+                <option value="">{t('common.select')}</option>
                 {eventOptions.map((event) => (
                   <option key={event.id} value={event.id}>{event.label}</option>
                 ))}
               </select>
             </Field>
             <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Status">
+              <Field label={t('common.status')}>
                 <select value={budgetForm.status} onChange={(event) => setBudgetForm((current) => ({ ...(current as typeof budgetForm), status: event.target.value as BudgetInput['status'] }))} className={inputClassName}>
                   {['draft', 'sent', 'approved', 'rejected', 'expired'].map((status) => (
-                    <option key={status} value={status}>{status}</option>
+                    <option key={status} value={status}>{budgetStatusLabel(status as BudgetInput['status'])}</option>
                   ))}
                 </select>
               </Field>
-              <Field label="Moeda">
+              <Field label={t('common.currency')}>
                 <input value={budgetForm.currency} onChange={(event) => setBudgetForm((current) => ({ ...(current as typeof budgetForm), currency: event.target.value.toUpperCase() }))} className={inputClassName} />
               </Field>
-              <Field label="Desconto">
+              <Field label={t('common.discount')}>
                 <input type="number" min={0} step="0.01" value={budgetForm.discountAmount} onChange={(event) => setBudgetForm((current) => ({ ...(current as typeof budgetForm), discountAmount: Number(event.target.value || 0) }))} className={inputClassName} />
               </Field>
             </div>
-            <Field label="Validade">
+            <Field label={t('common.validUntil')}>
               <input type="datetime-local" value={budgetForm.validUntil ? isoToDateTimeLocal(budgetForm.validUntil) : ''} onChange={(event) => setBudgetForm((current) => ({ ...(current as typeof budgetForm), validUntil: event.target.value ? dateTimeLocalToIso(event.target.value) : '' }))} className={inputClassName} />
             </Field>
             <div className="space-y-3">
               {budgetForm.items.map((item, index) => (
                 <div key={index} className="grid gap-3 rounded-[1.25rem] border border-stone-200 p-4 md:grid-cols-[1.4fr,0.6fr,0.7fr,auto]">
-                  <input value={item.description} onChange={(event) => setBudgetForm((current) => ({ ...((current ?? budgetForm) as typeof budgetForm), items: (current ?? budgetForm).items.map((entry, entryIndex) => entryIndex === index ? { ...entry, description: event.target.value } : entry) }))} placeholder="Descrição" className={inputClassName} />
-                  <input type="number" min={1} step="0.1" value={item.quantity} onChange={(event) => setBudgetForm((current) => ({ ...((current ?? budgetForm) as typeof budgetForm), items: (current ?? budgetForm).items.map((entry, entryIndex) => entryIndex === index ? { ...entry, quantity: Number(event.target.value || 1) } : entry) }))} placeholder="Qtd" className={inputClassName} />
-                  <input type="number" min={0} step="0.01" value={item.unitPrice} onChange={(event) => setBudgetForm((current) => ({ ...((current ?? budgetForm) as typeof budgetForm), items: (current ?? budgetForm).items.map((entry, entryIndex) => entryIndex === index ? { ...entry, unitPrice: Number(event.target.value || 0) } : entry) }))} placeholder="Valor" className={inputClassName} />
+                  <input value={item.description} onChange={(event) => setBudgetForm((current) => ({ ...((current ?? budgetForm) as typeof budgetForm), items: (current ?? budgetForm).items.map((entry, entryIndex) => entryIndex === index ? { ...entry, description: event.target.value } : entry) }))} placeholder={t('common.description')} className={inputClassName} />
+                  <input type="number" min={1} step="0.1" value={item.quantity} onChange={(event) => setBudgetForm((current) => ({ ...((current ?? budgetForm) as typeof budgetForm), items: (current ?? budgetForm).items.map((entry, entryIndex) => entryIndex === index ? { ...entry, quantity: Number(event.target.value || 1) } : entry) }))} placeholder={t('common.quantity')} className={inputClassName} />
+                  <input type="number" min={0} step="0.01" value={item.unitPrice} onChange={(event) => setBudgetForm((current) => ({ ...((current ?? budgetForm) as typeof budgetForm), items: (current ?? budgetForm).items.map((entry, entryIndex) => entryIndex === index ? { ...entry, unitPrice: Number(event.target.value || 0) } : entry) }))} placeholder={t('common.unitPrice')} className={inputClassName} />
                   <button type="button" className={secondaryButtonClassName} onClick={() => setBudgetForm((current) => ({ ...((current ?? budgetForm) as typeof budgetForm), items: (current ?? budgetForm).items.filter((_, entryIndex) => entryIndex !== index) }))}>
-                    Remover
+                    {t('common.delete')}
                   </button>
                 </div>
               ))}
               <button type="button" className={secondaryButtonClassName} onClick={() => setBudgetForm((current) => ({ ...((current ?? budgetForm) as typeof budgetForm), items: [...(current ?? budgetForm).items, emptyBudgetItem] }))}>
-                Adicionar item
+                {t('common.addItem')}
               </button>
             </div>
             <button type="submit" className={primaryButtonClassName} disabled={busyAction === 'create-budget'}>
-              {busyAction === 'create-budget' ? 'Salvando...' : 'Criar orçamento'}
+              {busyAction === 'create-budget' ? t('common.processing') : t('clientDetail.budgets.create')}
             </button>
           </form>
 
@@ -790,7 +815,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
           </div>
         </SectionCard>
 
-        <SectionCard title="Contratos" description="PDF com versionamento simples, abertura segura e status manual.">
+        <SectionCard title={t('clientDetail.contracts.title')} description={t('clientDetail.contracts.description')}>
           <form
             className="grid gap-3"
             onSubmit={async (event) => {
@@ -799,7 +824,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
               const file = fileInput?.files?.[0];
 
               if (!auth.client || !file) {
-                setFormError('Selecione um PDF de contrato.');
+                setFormError(t('clientDetail.contracts.selectPdf'));
                 return;
               }
 
@@ -818,31 +843,31 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
               });
             }}
           >
-            <Field label="Evento">
+            <Field label={t('common.event')}>
               <select value={contractForm.eventId} onChange={(event) => setContractForm((current) => ({ ...(current as typeof contractForm), eventId: event.target.value }))} className={inputClassName}>
-                <option value="">Selecione</option>
+                <option value="">{t('common.select')}</option>
                 {eventOptions.map((event) => (
                   <option key={event.id} value={event.id}>{event.label}</option>
                 ))}
               </select>
             </Field>
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Status inicial">
+              <Field label={t('common.initialStatus')}>
                 <select value={contractForm.status} onChange={(event) => setContractForm((current) => ({ ...(current as typeof contractForm), status: event.target.value as ContractInput['status'] }))} className={inputClassName}>
                   {['draft', 'uploaded', 'sent', 'signed', 'cancelled'].map((status) => (
-                    <option key={status} value={status}>{status}</option>
+                    <option key={status} value={status}>{contractStatusLabel(status as ContractInput['status'])}</option>
                   ))}
                 </select>
               </Field>
-              <Field label="Assinado em">
+              <Field label={t('common.signedAt')}>
                 <input type="datetime-local" value={contractForm.signedAt ? isoToDateTimeLocal(contractForm.signedAt) : ''} onChange={(event) => setContractForm((current) => ({ ...(current as typeof contractForm), signedAt: event.target.value ? dateTimeLocalToIso(event.target.value) : '' }))} className={inputClassName} />
               </Field>
             </div>
-            <Field label="PDF do contrato">
+            <Field label={t('common.contractPdf')}>
               <input name="contractFile" type="file" accept="application/pdf,.pdf" className={inputClassName} />
             </Field>
             <button type="submit" className={primaryButtonClassName} disabled={busyAction === 'create-contract'}>
-              {busyAction === 'create-contract' ? 'Enviando...' : 'Criar contrato'}
+              {busyAction === 'create-contract' ? t('common.processing') : t('clientDetail.contracts.create')}
             </button>
           </form>
 
@@ -857,11 +882,11 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                 busyAction={busyAction}
                 onOpen={async () => {
                   if (!contract.version) {
-                    setFormError('Este contrato ainda não possui PDF disponível.');
+                    setFormError(t('clientDetail.contracts.missingPdf'));
                     return;
                   }
 
-                  await openStorageFile('contracts', contract.version.storagePath, 'Contrato aberto em nova guia.');
+                  await openStorageFile('contracts', contract.version.storagePath, t('clientDetail.contracts.openPdf'));
                 }}
                 onUploadVersion={async (file) => {
                   if (!auth.client) return;
@@ -891,8 +916,8 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
       </div>
 
       <SectionCard
-        title="Conversa"
-        description="Inbox real por cliente, com opt-in auditável, respostas livres dentro da janela e templates aprovados para fluxos operacionais."
+        title={t('clientDetail.inbox.title')}
+        description={t('clientDetail.inbox.description')}
         data-testid="client-conversation"
       >
         <div className="grid gap-4 xl:grid-cols-[0.7fr,1.3fr]">
@@ -900,21 +925,26 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
             <div className="rounded-[1.25rem] border border-stone-200 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-stone-950">Consentimento WhatsApp</p>
+                  <p className="font-semibold text-stone-950">{t('clientDetail.inbox.optInTitle')}</p>
                   <p className="mt-1 text-sm text-stone-600">
                     {communicationData.optIn
-                      ? `Status ${communicationData.optIn.status} • origem ${communicationData.optIn.source}`
-                      : 'Nenhum opt-in registrado ainda.'}
+                      ? t('clientDetail.inbox.optInStatus', {
+                          status: communicationData.optIn.status,
+                          source: communicationData.optIn.source,
+                        })
+                      : t('clientDetail.inbox.optInEmpty')}
                   </p>
                 </div>
                 <Badge tone={communicationData.optIn?.status === 'opted_in' ? 'success' : 'warning'}>
-                  {communicationData.optIn?.status ?? 'pendente'}
+                  {communicationData.optIn?.status ?? t('clientDetail.inbox.pending')}
                 </Badge>
               </div>
               <p className="mt-3 text-sm text-stone-600">
                 {communicationData.optIn?.grantedAt
-                  ? `Concedido em ${formatDateTime(communicationData.optIn.grantedAt)}`
-                  : 'Registre o consentimento antes de disparar templates operacionais e automações.'}
+                  ? t('clientDetail.inbox.optInGrantedAt', {
+                      value: formatDateTime(communicationData.optIn.grantedAt),
+                    })
+                  : t('clientDetail.inbox.optInHint')}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
@@ -937,7 +967,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                     });
                   }}
                 >
-                  {busyAction === 'opt-in' ? 'Salvando...' : 'Registrar opt-in'}
+                  {busyAction === 'opt-in' ? t('common.processing') : t('clientDetail.inbox.registerOptIn')}
                 </button>
                 <button
                   type="button"
@@ -959,7 +989,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                     });
                   }}
                 >
-                  {busyAction === 'opt-out' ? 'Atualizando...' : 'Revogar'}
+                  {busyAction === 'opt-out' ? t('common.processing') : t('clientDetail.inbox.revokeOptIn')}
                 </button>
               </div>
             </div>
@@ -967,15 +997,19 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
             <div className="rounded-[1.25rem] border border-stone-200 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-stone-950">Template operacional</p>
+                  <p className="font-semibold text-stone-950">{t('clientDetail.inbox.templateTitle')}</p>
                   <p className="mt-1 text-sm text-stone-600">
-                    Selecione o template aprovado no WhatsApp e preencha as variáveis mínimas.
+                    {t('clientDetail.inbox.templateDescription')}
                   </p>
                 </div>
-                <Badge tone="info">{communicationData.templates.length} ativos</Badge>
+                <Badge tone="info">
+                  {t('clientDetail.inbox.templatesActive', {
+                    count: String(communicationData.templates.length),
+                  })}
+                </Badge>
               </div>
               <div className="mt-4 space-y-3">
-                <Field label="Template">
+                <Field label={t('clientDetail.inbox.templateField')}>
                   <select
                     data-testid="template-select"
                     value={selectedTemplateId}
@@ -1003,13 +1037,13 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                 {selectedTemplate ? (
                   <div className="rounded-2xl bg-stone-50 p-4">
                     <p className="text-sm font-semibold text-stone-900">
-                      {selectedTemplate.externalTemplateName ?? 'Mapeamento pendente'}
+                      {selectedTemplate.externalTemplateName ?? t('clientDetail.inbox.mappingPending')}
                     </p>
                     <p className="mt-2 text-sm leading-6 text-stone-600">{selectedTemplate.body}</p>
                     <p className="mt-2 text-xs uppercase tracking-[0.2em] text-stone-400">
                       {selectedTemplate.requiresOptIn
-                        ? 'Template exige opt-in auditável.'
-                        : 'Template liberado sem opt-in.'}
+                        ? t('clientDetail.inbox.templateRequiresOptIn')
+                        : t('clientDetail.inbox.templateNoOptIn')}
                     </p>
                   </div>
                 ) : null}
@@ -1058,11 +1092,11 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                     });
                   }}
                 >
-                  {busyAction === 'send-template' ? 'Enviando...' : 'Enviar template'}
+                  {busyAction === 'send-template' ? t('common.processing') : t('clientDetail.inbox.sendTemplate')}
                 </button>
                 {selectedTemplate && !selectedTemplateAllowsSend ? (
                   <p className="text-sm text-amber-700">
-                    Este template exige opt-in válido antes do envio.
+                    {t('clientDetail.inbox.templateBlocked')}
                   </p>
                 ) : null}
               </div>
@@ -1071,12 +1105,16 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
             <div className="rounded-[1.25rem] border border-stone-200 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-stone-950">Automações operacionais</p>
+                  <p className="font-semibold text-stone-950">{t('clientDetail.inbox.automationTitle')}</p>
                   <p className="mt-1 text-sm text-stone-600">
-                    Rodada manual para validar lembretes e follow-up desta cliente.
+                    {t('clientDetail.inbox.automationDescription')}
                   </p>
                 </div>
-                <Badge tone="info">{communicationData.notificationLogs.length} logs</Badge>
+                <Badge tone="info">
+                  {t('clientDetail.inbox.automationLogs', {
+                    count: String(communicationData.notificationLogs.length),
+                  })}
+                </Badge>
               </div>
               <button
                 type="button"
@@ -1090,36 +1128,40 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                   await runAction('dispatch-automation', async () => {
                     const result = await dispatchAutomationRules(auth.client!, { clientId });
                     setStatusMessage(
-                      `${result.processedCount} automação(ões) processada(s), ${result.skippedCount} pulada(s) e ${result.failedCount} falha(s).`,
+                      t('clientDetail.inbox.automationResult', {
+                        processed: String(result.processedCount),
+                        skipped: String(result.skippedCount),
+                        failed: String(result.failedCount),
+                      }),
                     );
                   });
                 }}
               >
-                {busyAction === 'dispatch-automation' ? 'Executando...' : 'Executar automações da cliente'}
+                {busyAction === 'dispatch-automation' ? t('common.processing') : t('clientDetail.inbox.runAutomations')}
               </button>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="rounded-[1.25rem] border border-stone-200 p-4">
-              <p className="font-semibold text-stone-950">Responder cliente</p>
+              <p className="font-semibold text-stone-950">{t('clientDetail.inbox.replyTitle')}</p>
               <p className="mt-1 text-sm text-stone-600">
-                Respostas livres ficam reservadas para a janela aberta pela cliente no WhatsApp.
+                {t('clientDetail.inbox.replyDescription')}
               </p>
               <div className="mt-4 rounded-2xl bg-stone-50 p-4 text-sm text-stone-700">
                 <p className="font-semibold text-stone-900">
                   {conversationWindow.status === 'open'
-                    ? 'Janela de atendimento aberta'
+                    ? t('clientDetail.inbox.windowOpen')
                     : conversationWindow.status === 'expired'
-                      ? 'Janela de atendimento expirada'
-                      : 'Janela de atendimento indisponível'}
+                      ? t('clientDetail.inbox.windowExpired')
+                      : t('clientDetail.inbox.windowUnavailable')}
                 </p>
                 <p className="mt-2">{conversationWindow.helperText}</p>
                 <p className="mt-2 text-xs uppercase tracking-[0.2em] text-stone-400">
-                  Sincronizacao automatica a cada 15 segundos.
+                  {t('common.automaticSync')}
                 </p>
               </div>
-              <Field label="Mensagem" className="mt-4">
+              <Field label={t('common.message')} className="mt-4">
                 <textarea
                   data-testid="conversation-textarea"
                   value={messageBody}
@@ -1127,8 +1169,8 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                   className={`${inputClassName} min-h-28`}
                   placeholder={
                     conversationWindow.canSendFreeText
-                      ? 'Digite uma resposta operacional ou contextual.'
-                      : 'Fora da janela de 24h, use um template aprovado.'
+                      ? t('clientDetail.inbox.replyPlaceholder')
+                      : t('mobile.inboxBlocked')
                   }
                 />
               </Field>
@@ -1163,7 +1205,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                     });
                   }}
                 >
-                  {busyAction === 'send-text' ? 'Enviando...' : 'Enviar resposta'}
+                  {busyAction === 'send-text' ? t('common.processing') : t('clientDetail.inbox.sendReply')}
                 </button>
               </div>
             </div>
@@ -1182,11 +1224,11 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-medium">
                         {message.messageType === 'template'
-                          ? message.templateName ?? 'Template operacional'
+                          ? message.templateName ?? t('clientDetail.inbox.templateFallback')
                           : message.body}
                       </p>
                       <Badge tone={message.status === 'failed' ? 'warning' : message.status === 'read' ? 'success' : 'info'}>
-                        {message.status}
+                        {messageStatusLabel(message.status)}
                       </Badge>
                     </div>
                     {message.messageType === 'template' ? (
@@ -1214,8 +1256,8 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                         }}
                       >
                         {busyAction === `retry-message-${message.id}`
-                          ? 'Reenviando...'
-                          : 'Reenviar'}
+                          ? t('common.processing')
+                          : t('common.retry')}
                       </button>
                     ) : null}
                     <p className="mt-2 text-xs uppercase tracking-[0.2em] opacity-70">
@@ -1225,37 +1267,37 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                 ))
               ) : (
                 <div className="rounded-[1.25rem] border border-dashed border-stone-300 p-6 text-sm text-stone-600">
-                  Nenhuma conversa registrada ainda. Quando a cliente responder ou você enviar um template, o histórico aparecerá aqui.
+                  {t('clientDetail.inbox.historyEmpty')}
                 </div>
               )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-[1.25rem] border border-stone-200 p-4">
-                <p className="font-semibold text-stone-950">Status e timeline de envio</p>
+                <p className="font-semibold text-stone-950">{t('clientDetail.inbox.statusHistoryTitle')}</p>
                 <div className="mt-4 space-y-3">
                   {communicationData.statusEvents.length ? (
                     communicationData.statusEvents.map((entry) => (
                       <div key={entry.id} className="rounded-2xl bg-stone-50 p-3">
                         <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm font-medium text-stone-900">{entry.status}</span>
+                          <span className="text-sm font-medium text-stone-900">{messageStatusLabel(entry.status)}</span>
                           <span className="text-xs uppercase tracking-[0.2em] text-stone-400">
                             {formatDateTime(entry.occurredAt)}
                           </span>
                         </div>
                         <p className="mt-2 text-sm text-stone-600">
-                          {entry.externalMessageId ?? 'Evento de status registrado'}
+                          {entry.externalMessageId ?? t('clientDetail.inbox.statusRecorded')}
                         </p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-stone-600">Nenhum status remoto registrado ainda.</p>
+                    <p className="text-sm text-stone-600">{t('clientDetail.inbox.statusHistoryEmpty')}</p>
                   )}
                 </div>
               </div>
 
               <div className="rounded-[1.25rem] border border-stone-200 p-4">
-                <p className="font-semibold text-stone-950">Execuções automáticas</p>
+                <p className="font-semibold text-stone-950">{t('clientDetail.inbox.automationHistoryTitle')}</p>
                 <div className="mt-4 space-y-3">
                   {communicationData.notificationLogs.length ? (
                     communicationData.notificationLogs.map((entry) => (
@@ -1267,19 +1309,22 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                           </Badge>
                         </div>
                         <p className="mt-2 text-sm text-stone-600">
-                          {entry.errorMessage ?? `Agendado para ${formatDateTime(entry.scheduledFor)}`}
+                          {entry.errorMessage ??
+                            t('clientDetail.inbox.automationScheduledFor', {
+                              value: formatDateTime(entry.scheduledFor),
+                            })}
                         </p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-stone-600">Nenhuma execução automática registrada ainda.</p>
+                    <p className="text-sm text-stone-600">{t('clientDetail.inbox.automationHistoryEmpty')}</p>
                   )}
                 </div>
               </div>
             </div>
 
             <div className="rounded-[1.25rem] border border-stone-200 p-4">
-              <p className="font-semibold text-stone-950">Execuções do scheduler</p>
+              <p className="font-semibold text-stone-950">{t('clientDetail.inbox.schedulerTitle')}</p>
               <div className="mt-4 space-y-3">
                 {communicationData.dispatchRuns.length ? (
                   communicationData.dispatchRuns.map((entry) => (
@@ -1301,8 +1346,11 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                         </Badge>
                       </div>
                       <p className="mt-2 text-sm text-stone-600">
-                        {entry.processedCount} processada(s), {entry.skippedCount} pulada(s),{' '}
-                        {entry.failedCount} falha(s).
+                        {t('clientDetail.inbox.schedulerSummary', {
+                          processed: String(entry.processedCount),
+                          skipped: String(entry.skippedCount),
+                          failed: String(entry.failedCount),
+                        })}
                       </p>
                       <p className="mt-2 text-xs uppercase tracking-[0.2em] text-stone-400">
                         {formatDateTime(entry.startedAt)}
@@ -1311,7 +1359,7 @@ export function ClientDetailScreen({ clientId }: { clientId: string }) {
                   ))
                 ) : (
                   <p className="text-sm text-stone-600">
-                    Nenhuma execução de scheduler registrada para esta cliente.
+                    {t('clientDetail.inbox.schedulerEmpty')}
                   </p>
                 )}
               </div>
@@ -1360,6 +1408,7 @@ function EditableEventCard({
   onDelete: () => Promise<void>;
   busyAction: string | null;
 }) {
+  const { formatDateTime, eventStatusLabel, t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Omit<ClientEventInput, 'clientId'>>({
     title: event.title,
@@ -1380,7 +1429,7 @@ function EditableEventCard({
             <input value={form.eventType} onChange={(event) => setForm((current) => ({ ...current, eventType: event.target.value }))} className={inputClassName} />
             <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as ClientEventInput['status'] }))} className={inputClassName}>
               {['lead', 'quoted', 'booked', 'completed', 'cancelled'].map((status) => (
-                <option key={status} value={status}>{status}</option>
+                <option key={status} value={status}>{eventStatusLabel(status as ClientEventInput['status'])}</option>
               ))}
             </select>
           </div>
@@ -1389,9 +1438,9 @@ function EditableEventCard({
           <textarea value={form.notes ?? ''} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} className={`${inputClassName} min-h-24`} />
           <div className="flex flex-wrap gap-3">
             <button type="button" className={primaryButtonClassName} disabled={busyAction === `update-event-${event.id}`} onClick={async () => { await onSave(form); setEditing(false); }}>
-              {busyAction === `update-event-${event.id}` ? 'Salvando...' : 'Salvar'}
+              {busyAction === `update-event-${event.id}` ? t('common.processing') : t('common.save')}
             </button>
-            <button type="button" className={secondaryButtonClassName} onClick={() => setEditing(false)}>Cancelar</button>
+            <button type="button" className={secondaryButtonClassName} onClick={() => setEditing(false)}>{t('common.cancel')}</button>
           </div>
         </div>
       ) : (
@@ -1400,15 +1449,15 @@ function EditableEventCard({
             <div>
               <p className="font-semibold text-stone-950">{event.title}</p>
               <p className="mt-1 text-sm text-stone-600">
-                {formatDateTime(event.eventDate)} • {event.location ?? 'Sem local definido'}
+                {formatDateTime(event.eventDate)} • {event.location ?? t('common.noLocation')}
               </p>
             </div>
-            <Badge tone={event.status === 'booked' ? 'success' : 'warning'}>{event.status}</Badge>
+            <Badge tone={event.status === 'booked' ? 'success' : 'warning'}>{eventStatusLabel(event.status)}</Badge>
           </div>
           <p className="mt-3 text-sm leading-6 text-stone-600">{event.notes ?? 'Sem observações.'}</p>
           <div className="mt-3 flex flex-wrap gap-3">
             <button type="button" className={secondaryButtonClassName} onClick={() => setEditing(true)}>Editar</button>
-            <button type="button" className={dangerTextButtonClassName} onClick={() => void onDelete()}>Excluir</button>
+            <button type="button" className={dangerTextButtonClassName} onClick={() => void onDelete()}>{t('common.delete')}</button>
           </div>
         </>
       )}
@@ -1437,6 +1486,7 @@ function AssetCard({
   onOpen: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
+  const { t } = useI18n();
   const { url } = useSignedStorageUrl(client, bucket, previewImage ? path : undefined);
 
   return (
@@ -1458,10 +1508,10 @@ function AssetCard({
       </div>
       <div className="mt-3 flex items-center gap-4">
         <button type="button" className="text-sm font-semibold text-cyan-700 transition hover:text-cyan-600" onClick={() => void onOpen()}>
-          Abrir arquivo
+          {t('common.openFile')}
         </button>
         <button type="button" className={dangerTextButtonClassName} onClick={() => void onDelete()}>
-          Excluir
+          {t('common.delete')}
         </button>
       </div>
     </div>
@@ -1487,6 +1537,7 @@ function BudgetCard({
   onDelete: () => Promise<void>;
   busyAction: string | null;
 }) {
+  const { formatCurrency, formatDate, budgetStatusLabel, t } = useI18n();
   return (
     <div className="rounded-[1.25rem] border border-stone-200 p-4">
       <div className="flex items-center justify-between gap-3">
@@ -1502,7 +1553,7 @@ function BudgetCard({
           className={inputClassName}
         >
           {['draft', 'sent', 'approved', 'rejected', 'expired'].map((budgetStatus) => (
-            <option key={budgetStatus} value={budgetStatus}>{budgetStatus}</option>
+            <option key={budgetStatus} value={budgetStatus}>{budgetStatusLabel(budgetStatus as BudgetInput['status'])}</option>
           ))}
         </select>
       </div>
@@ -1515,9 +1566,9 @@ function BudgetCard({
         ))}
       </div>
       <div className="mt-3 flex items-center gap-3">
-        <Badge tone={status === 'approved' ? 'success' : 'warning'}>{status}</Badge>
+        <Badge tone={status === 'approved' ? 'success' : 'warning'}>{budgetStatusLabel(status)}</Badge>
         <button type="button" className={dangerTextButtonClassName} disabled={busyAction === `delete-budget-${budgetId}`} onClick={() => void onDelete()}>
-          Excluir
+          {t('common.delete')}
         </button>
       </div>
     </div>
@@ -1545,6 +1596,7 @@ function ContractCard({
   onUpdate: (status: ContractInput['status']) => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
+  const { formatDate, contractStatusLabel, t } = useI18n();
   return (
     <div className="rounded-[1.25rem] border border-stone-200 p-4">
       <div className="flex items-center justify-between gap-3">
@@ -1559,7 +1611,7 @@ function ContractCard({
         </div>
         <select value={status} onChange={(event) => void onUpdate(event.target.value as ContractInput['status'])} className={inputClassName}>
           {['draft', 'uploaded', 'sent', 'signed', 'cancelled'].map((contractStatus) => (
-            <option key={contractStatus} value={contractStatus}>{contractStatus}</option>
+            <option key={contractStatus} value={contractStatus}>{contractStatusLabel(contractStatus as ContractInput['status'])}</option>
           ))}
         </select>
       </div>
@@ -1576,7 +1628,7 @@ function ContractCard({
         </div>
       ) : null}
       <div className="mt-3 flex items-center gap-3">
-        <Badge tone={status === 'signed' ? 'success' : 'warning'}>{status}</Badge>
+        <Badge tone={status === 'signed' ? 'success' : 'warning'}>{contractStatusLabel(status)}</Badge>
         <button type="button" className="text-sm font-semibold text-cyan-700 transition hover:text-cyan-600" onClick={() => void onOpen()}>
           Abrir PDF
         </button>
@@ -1596,7 +1648,7 @@ function ContractCard({
           />
         </label>
         <button type="button" className={dangerTextButtonClassName} onClick={() => void onDelete()}>
-          {busyAction?.startsWith('delete-contract-') ? 'Excluindo...' : 'Excluir'}
+          {busyAction?.startsWith('delete-contract-') ? t('common.processing') : t('common.delete')}
         </button>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { useI18n } from '@aura/core';
 import { Button } from '@aura/ui';
 import type {
   AuthSignInInput,
@@ -31,6 +32,7 @@ const signUpInitialState: AuthSignUpInput = {
 export function LoginScreen() {
   const router = useRouter();
   const auth = useAuth();
+  const { locale, locales, localeLabel, setLocale, t } = useI18n();
   const [mode, setMode] = useState<AuthMode>('sign-in');
   const [signInData, setSignInData] = useState<AuthSignInInput>(signInInitialState);
   const [signUpData, setSignUpData] = useState<AuthSignUpInput>(signUpInitialState);
@@ -53,8 +55,8 @@ export function LoginScreen() {
         const response = await auth.signUp(signUpData);
         setMessage(
           response.requiresEmailConfirmation
-            ? 'Conta criada. Confirme o email antes de entrar.'
-            : 'Conta criada com sucesso. Entrando na AURA.',
+            ? t('auth.signupConfirmation')
+            : t('auth.signupSuccess'),
         );
 
         if (!response.requiresEmailConfirmation) {
@@ -79,19 +81,39 @@ export function LoginScreen() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(249,115,22,0.22),_transparent_35%),linear-gradient(180deg,_#fffaf7_0%,_#fff_100%)] px-4 py-10 text-stone-900 md:px-6">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1fr,0.9fr]">
         <section className="rounded-[2rem] border border-white/70 bg-white/80 p-8 shadow-[0_24px_80px_rgba(148,74,24,0.08)] backdrop-blur">
-          <p className="text-xs uppercase tracking-[0.4em] text-cyan-700">AURA</p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <p className="text-xs uppercase tracking-[0.4em] text-cyan-700">{t('common.appName')}</p>
+            <div className="flex flex-wrap gap-2">
+              {locales.map((supportedLocale) => (
+                <button
+                  key={supportedLocale}
+                  type="button"
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    locale === supportedLocale
+                      ? 'bg-stone-950 text-white'
+                      : 'border border-stone-200 bg-white text-stone-700 hover:bg-stone-100'
+                  }`}
+                  onClick={() => {
+                    void setLocale(supportedLocale);
+                  }}
+                >
+                  {localeLabel(supportedLocale)}
+                </button>
+              ))}
+            </div>
+          </div>
           <h1 className="mt-4 max-w-xl font-serif text-5xl leading-tight text-stone-950">
-            Operação real para CRM, agenda, contratos e relacionamento.
+            {t('auth.heroTitle')}
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-8 text-stone-600">
-            A fase 3 consolida a AURA como núcleo operacional real com auth, CRUDs, contratos versionados, uploads seguros e operação consistente entre web e mobile.
+            {t('auth.heroDescription')}
           </p>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {[
-              'Auth real com criação automática do tenant profissional',
-              'Clientes, eventos, orçamentos e contratos persistidos',
-              'Uploads reais de imagem e PDF com timeline da cliente',
+              t('auth.feature.auth'),
+              t('auth.feature.crm'),
+              t('auth.feature.uploads'),
             ].map((item) => (
               <div key={item} className="rounded-[1.5rem] bg-stone-950 p-4 text-sm text-stone-100">
                 {item}
@@ -103,9 +125,9 @@ export function LoginScreen() {
         <section className="rounded-[2rem] border border-stone-200 bg-white p-8 shadow-[0_24px_80px_rgba(28,25,23,0.06)]">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-500">Entrar</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-orange-500">{t('auth.eyebrow')}</p>
               <h2 className="mt-3 text-3xl font-semibold text-stone-950">
-                {mode === 'sign-in' ? 'Acesse a operação da AURA' : 'Crie sua conta profissional'}
+                {mode === 'sign-in' ? t('auth.signInTitle') : t('auth.signUpTitle')}
               </h2>
             </div>
             <button
@@ -117,7 +139,7 @@ export function LoginScreen() {
                 setMessage(null);
               }}
             >
-              {mode === 'sign-in' ? 'Criar conta' : 'Já tenho conta'}
+              {mode === 'sign-in' ? t('auth.switchToSignUp') : t('auth.switchToSignIn')}
             </button>
           </div>
 
@@ -125,25 +147,25 @@ export function LoginScreen() {
             {mode === 'sign-up' ? (
               <>
                 <LabeledInput
-                  label="Nome completo"
+                  label={t('auth.fullName')}
                   value={signUpData.fullName}
                   onChange={(value) => setSignUpData((current) => ({ ...current, fullName: value }))}
                   testId="sign-up-full-name"
                 />
                 <LabeledInput
-                  label="Nome do negócio"
+                  label={t('auth.businessName')}
                   value={signUpData.businessName}
                   onChange={(value) => setSignUpData((current) => ({ ...current, businessName: value }))}
                   testId="sign-up-business-name"
                 />
                 <LabeledInput
-                  label="Telefone"
+                  label={t('auth.phone')}
                   value={signUpData.phone}
                   onChange={(value) => setSignUpData((current) => ({ ...current, phone: value }))}
                   testId="sign-up-phone"
                 />
                 <LabeledInput
-                  label="WhatsApp"
+                  label={t('auth.whatsapp')}
                   value={signUpData.whatsappPhone ?? ''}
                   onChange={(value) => setSignUpData((current) => ({ ...current, whatsappPhone: value }))}
                   testId="sign-up-whatsapp"
@@ -152,7 +174,7 @@ export function LoginScreen() {
             ) : null}
 
             <LabeledInput
-              label="Email"
+              label={t('auth.email')}
               type="email"
               value={mode === 'sign-in' ? signInData.email : signUpData.email}
               onChange={(value) =>
@@ -163,7 +185,7 @@ export function LoginScreen() {
               testId={mode === 'sign-in' ? 'sign-in-email' : 'sign-up-email'}
             />
             <LabeledInput
-              label="Senha"
+              label={t('auth.password')}
               type="password"
               value={mode === 'sign-in' ? signInData.password : signUpData.password}
               onChange={(value) =>
@@ -189,27 +211,27 @@ export function LoginScreen() {
                 disabled={loading}
               >
                 {loading
-                  ? 'Processando...'
+                  ? t('common.processing')
                   : mode === 'sign-in'
-                    ? 'Entrar no dashboard'
-                    : 'Criar conta'}
+                    ? t('auth.submitSignIn')
+                    : t('auth.submitSignUp')}
               </button>
             </div>
           </form>
 
           <div className="mt-8 rounded-[1.5rem] bg-orange-50 p-5 text-sm leading-7 text-stone-600">
-            Se o projeto Supabase estiver com confirmação de email ativa, o signup cria a conta e aguarda a confirmação. Com confirmação desativada, a sessão entra direto.
+            {t('auth.signupHint')}
           </div>
 
           {!auth.client ? (
             <div className="mt-4 rounded-[1.5rem] bg-stone-100 p-5 text-sm leading-7 text-stone-600">
-              Configure `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` para habilitar o auth real.
+              {t('auth.missingConfig')}
             </div>
           ) : null}
 
           <div className="mt-6">
             <Button href="https://supabase.com/docs" tone="secondary">
-              Documentação do Supabase
+              {t('auth.supabaseDocs')}
             </Button>
           </div>
         </section>
